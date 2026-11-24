@@ -124,7 +124,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
     <p>Gra zawiera nagłe, głośne wystraszenia. Załóż słuchawki. Zgaś światło.</p>
     <div class="seg" id="segScare"><button type="button" data-v="2">Straszenie: mocne</button><button type="button" data-v="1">łagodne</button><button type="button" data-v="0">wyłączone</button></div><br>
     <button class="go" id="bGo" type="button">WEJDŹ</button><br>
-    <p id="contTxt" style="font-size:14px;margin-top:12px"></p><p style="font-size:11px;opacity:.45;margin-top:6px">wersja 7 · dźwięk po uśpieniu</p>
+    <p id="contTxt" style="font-size:14px;margin-top:12px"></p><p style="font-size:11px;opacity:.45;margin-top:6px">wersja 8 · dźwięk po uśpieniu</p>
   </div>
 </div>
 <div id="load">WCZYTYWANIE…</div>
@@ -196,23 +196,23 @@ function mNoise(A,dest,N){const s=A.ctx.createBufferSource();s.buffer=A.noise;s.
 const MUS={
  '2'(A,G,N,T){const c=A.ctx;const hum=c.createGain();hum.gain.value=.05;hum.connect(G);mOsc(c,'sawtooth',100,.4,hum,N);mOsc(c,'square',120,.08,hum,N);
   const hp=c.createBiquadFilter();hp.type='bandpass';hp.frequency.value=3500;hp.Q.value=4;const hg=c.createGain();hg.gain.value=.03;hp.connect(hg);hg.connect(G);mNoise(A,hp,N);
-  const fl=()=>{const t=c.currentTime;hum.gain.setValueAtTime(.05,t);if(Math.random()<.5){hum.gain.setValueAtTime(.005,t+.05);hum.gain.setValueAtTime(.05,t+.12);hum.gain.setValueAtTime(.01,t+.2);hum.gain.setValueAtTime(.05,t+.26)}T.push(setTimeout(fl,2000+Math.random()*6000))};fl();
+  const fl=()=>{if(A.ctx!==c)return;const t=c.currentTime;hum.gain.setValueAtTime(.05,t);if(Math.random()<.5){hum.gain.setValueAtTime(.005,t+.05);hum.gain.setValueAtTime(.05,t+.12);hum.gain.setValueAtTime(.01,t+.2);hum.gain.setValueAtTime(.05,t+.26)}T.push(setTimeout(fl,2000+Math.random()*6000))};fl();
   const br=c.createBiquadFilter();br.type='lowpass';br.frequency.value=160;const bg=c.createGain();bg.gain.value=0;br.connect(bg);bg.connect(G);mNoise(A,br,N);
-  const breathe=()=>{const t=c.currentTime;bg.gain.cancelScheduledValues(t);bg.gain.setValueAtTime(bg.gain.value,t);bg.gain.linearRampToValueAtTime(.9,t+2.6);bg.gain.linearRampToValueAtTime(.05,t+6);T.push(setTimeout(breathe,7000))};breathe();
-  const clank=()=>{const t=c.currentTime,f=180+Math.random()*400;[1,2.7,5.1].forEach((k,j)=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=f*k;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.05/(j+1),t+.004);g.gain.exponentialRampToValueAtTime(.0003,t+1.6);o.connect(g);g.connect(A.mrev);o.start(t);o.stop(t+1.8)});T.push(setTimeout(clank,5000+Math.random()*9000))};T.push(setTimeout(clank,3000));return .6},
+  const breathe=()=>{if(A.ctx!==c)return;const t=c.currentTime;bg.gain.cancelScheduledValues(t);bg.gain.setValueAtTime(bg.gain.value,t);bg.gain.linearRampToValueAtTime(.9,t+2.6);bg.gain.linearRampToValueAtTime(.05,t+6);T.push(setTimeout(breathe,7000))};breathe();
+  const clank=()=>{if(A.ctx!==c)return;const t=c.currentTime,f=180+Math.random()*400;[1,2.7,5.1].forEach((k,j)=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=f*k;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.05/(j+1),t+.004);g.gain.exponentialRampToValueAtTime(.0003,t+1.6);o.connect(g);g.connect(A.mrev);o.start(t);o.stop(t+1.8)});T.push(setTimeout(clank,5000+Math.random()*9000))};T.push(setTimeout(clank,3000));return .6},
  '3'(A,G,N,T){const c=A.ctx;const chords=[[110,130.8,164.8],[103.8,130.8,155.6],[98,123.5,146.8],[87.3,110,130.8],[92.5,116.5,138.6]];const V=[],B=[];const F=[[700,1220,2600],[400,800,2600],[300,870,2240]];
   for(let v=0;v<3;v++){const s1=c.createOscillator(),s2=c.createOscillator();s1.type='sawtooth';s2.type='sawtooth';s2.detune.value=9;const mix=c.createGain();mix.gain.value=.12;s1.connect(mix);s2.connect(mix);
    const out=c.createGain();F[0].forEach((f,k)=>{const b=c.createBiquadFilter();b.type='bandpass';b.frequency.value=f;b.Q.value=9;const bg=c.createGain();bg.gain.value=[1,.5,.25][k];mix.connect(b);b.connect(bg);bg.connect(out);B.push({b,k})});
    out.connect(G);out.connect(A.mrev);const vib=c.createOscillator(),vg=c.createGain();vib.frequency.value=4.5+v*.4;vg.gain.value=3;vib.connect(vg);vg.connect(s1.detune);vg.connect(s2.detune);vib.start();s1.start();s2.start();N.push(s1,s2,vib);V.push({s1,s2,v})}
-  let ci=0;const change=()=>{const ch=chords[ci%chords.length],t=c.currentTime;ci++;V.forEach(x=>{x.s1.frequency.setTargetAtTime(ch[x.v],t,.8);x.s2.frequency.setTargetAtTime(ch[x.v],t,.8)});const vf=F[ci%3];B.forEach(x=>x.b.frequency.setTargetAtTime(vf[x.k],t,1.5));T.push(setTimeout(change,6500))};change();return .35},
+  let ci=0;const change=()=>{if(A.ctx!==c)return;const ch=chords[ci%chords.length],t=c.currentTime;ci++;V.forEach(x=>{x.s1.frequency.setTargetAtTime(ch[x.v],t,.8);x.s2.frequency.setTargetAtTime(ch[x.v],t,.8)});const vf=F[ci%3];B.forEach(x=>x.b.frequency.setTargetAtTime(vf[x.k],t,1.5));T.push(setTimeout(change,6500))};change();return .35},
  '4'(A,G,N,T){const c=A.ctx;const st=c.createGain();st.gain.value=0;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1800;st.connect(lp);lp.connect(G);lp.connect(A.mrev);
   [196,207.7,277.2,293.7].forEach((f,i)=>{for(const d of[-7,6]){const o=mOsc(c,'sawtooth',f,.05,st,N);o.o.detune.value=d;const vb=c.createOscillator(),vg=c.createGain();vb.frequency.value=5+i*.3;vg.gain.value=6;vb.connect(vg);vg.connect(o.o.detune);vb.start();N.push(vb)}});
   mOsc(c,'sawtooth',49,.18,lp,N);mOsc(c,'sine',49,.5,G,N);
-  const swell=()=>{const t=c.currentTime;st.gain.cancelScheduledValues(t);st.gain.setValueAtTime(st.gain.value,t);st.gain.linearRampToValueAtTime(.9,t+5);st.gain.linearRampToValueAtTime(.1,t+11);T.push(setTimeout(swell,12000+Math.random()*4000))};swell();return .3}
+  const swell=()=>{if(A.ctx!==c)return;const t=c.currentTime;st.gain.cancelScheduledValues(t);st.gain.setValueAtTime(st.gain.value,t);st.gain.linearRampToValueAtTime(.9,t+5);st.gain.linearRampToValueAtTime(.1,t+11);T.push(setTimeout(swell,12000+Math.random()*4000))};swell();return .3}
 };
 function audioKick(){try{if(AU.ctx&&AU.ctx.state!=='running'&&!document.hidden&&$('#cover').hidden)AU.ctx.resume().catch(()=>{})}catch(e){}}
 let audioStale=false;
-function rebuildAudio(){try{const old=AU.ctx;clearTimeout(AU.musT);clearTimeout(AU.evT);AU.musT=null;AU.cur=null;AU.trk=null;AU.hum=null;AU.rs=null;AU.mt=null;AU.hs=null;AU.ctx=null;for(const k in recBuf)delete recBuf[k];if(old&&old.close)old.close().catch(()=>{})}catch(e){}
+function rebuildAudio(){try{const old=AU.ctx;if(AU.cur&&AU.cur.tm)AU.cur.tm.forEach(clearTimeout);clearTimeout(AU.musT);clearTimeout(AU.evT);AU.musT=null;AU.cur=null;AU.trk=null;AU.hum=null;AU.rs=null;AU.mt=null;AU.hs=null;AU.ctx=null;for(const k in recBuf)delete recBuf[k];if(old&&old.close)old.close().catch(()=>{})}catch(e){}
   AU.init();if(AU.ctx){AU.ctx.resume().catch(()=>{});if(!S.finished&&$('#filmWrap').hidden)AU.ambient(CHAPTERS[S.ch].root)}
   try{speechSynthesis.cancel()}catch(e){}unlockSpeech.done=0;unlockSpeech();preloadRec()}
 function audioGesture(){if(audioStale&&$('#cover').hidden&&AU.ctx){audioStale=false;rebuildAudio();return}audioKick()}
