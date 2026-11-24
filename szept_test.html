@@ -241,8 +241,18 @@ function whisperName(force,nameOverride){try{const nm=nameOverride||S.name;if(!n
   const f=()=>{whispering=false};u.onend=f;u.onerror=f;setTimeout(f,8000);speechSynthesis.speak(u);return true}catch(e){whispering=false;return false}}
 /* szept raz na 10 minut gry */
 const WHISPER_TEST=(()=>{const m=location.search.match(/szept=(\d+)/);return m?(+m[1])*1000:0})();
-const nextWhisperGap=()=>WHISPER_TEST||(180000+Math.random()*420000);
-setInterval(()=>{try{if(!S||!S.name||!S.stats||S.finished)return;if(S.nextW==null||WHISPER_TEST&&S.nextW-S.stats.play>WHISPER_TEST){S.nextW=S.stats.play+nextWhisperGap();return}if(S.stats.play>=S.nextW&&whisperName()){S.nextW=S.stats.play+nextWhisperGap();save()}}catch(e){}},5000);
+const nextWhisperGap=()=>WHISPER_TEST||(300000+Math.random()*300000);
+const REC=['szept_uwazaj','szept_zatoba','szept_gdzie'],recBuf={};
+function whisperRec(){try{if(!S.sound||!AU.ctx||AU.ctx.state!=='running'||!$('#cover').hidden||!$('#filmWrap').hidden||!$('#modal').hidden||!$('#story').hidden)return false;
+  const n=REC[Math.floor(Math.random()*REC.length)],c=AU.ctx;
+  const play=bf=>{const src=c.createBufferSource(),g=c.createGain();g.gain.value=.08;src.buffer=bf;src.connect(g);g.connect(c.destination);src.start()};
+  if(recBuf[n])play(recBuf[n]);else fetch(n+'.wav').then(r=>r.arrayBuffer()).then(ab=>new Promise((ok,no)=>c.decodeAudioData(ab,ok,no))).then(bf=>{recBuf[n]=bf;play(bf)}).catch(()=>{});
+  return true}catch(e){return false}}
+setInterval(()=>{try{if(!S||!S.stats||S.finished)return;
+  if(S.nextW==null||WHISPER_TEST&&S.nextW-S.stats.play>WHISPER_TEST){S.nextW=S.stats.play+nextWhisperGap();if(!S.wKind)S.wKind=Math.random()<.5?'rec':'tts';return}
+  if(S.stats.play<S.nextW)return;
+  const kind=S.name?S.wKind:'rec';const ok=kind==='tts'?whisperName():whisperRec();
+  if(ok){S.wKind=kind==='tts'?'rec':'tts';S.nextW=S.stats.play+nextWhisperGap();save()}}catch(e){}},5000);
 function unlockSpeech(){try{if(!('speechSynthesis' in window)||unlockSpeech.done)return;unlockSpeech.done=1;const u=new SpeechSynthesisUtterance(' ');u.volume=0;u.lang='pl-PL';speechSynthesis.speak(u);speechSynthesis.getVoices()}catch(e){}}
 function speak(text){try{if(!('speechSynthesis' in window))return false;const u=new SpeechSynthesisUtterance(text);u.lang='pl-PL';u.rate=.72;u.pitch=.2;u.volume=.9;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(e){return false}}
 
