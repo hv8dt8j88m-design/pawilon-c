@@ -35,6 +35,8 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
 .paper::before{content:"";position:absolute;inset:0;background-image:var(--noise);opacity:.45;mix-blend-mode:multiply;pointer-events:none}
 .paper>*{position:relative}
 .paper h2{margin:0 0 4px;font-size:24px;letter-spacing:.04em}
+.paper.notice{text-align:center;width:min(460px,100%)}
+.paper .nicon{font-size:64px;line-height:1.1;margin:4px 0 8px}
 .paper .sub{color:#4a463a;font-size:15px;margin:0 0 10px}
 .paper p{font-size:17px;line-height:1.5;margin:8px 0}
 .paper .prob{font-size:clamp(20px,3.6vw,28px);line-height:1.35;margin:10px 0;font-weight:700}
@@ -155,11 +157,11 @@ try{const r=JSON.parse(localStorage.getItem(SKEY)||'null');if(r&&r.v&&r.ch)S=Obj
 const V=()=>S.v[S.ch];
 function save(){try{localStorage.setItem(SKEY,JSON.stringify(S))}catch(e){}}
 function addNote(t){if(!S.notes.includes(t)){S.notes.push(t);save()}}
-function give(item){if(!S.inv.includes(item)){S.inv.push(item);save();drawInv();toast('Nowy przedmiot: '+ITEMS[item].n)}}
-function take(item){S.inv=S.inv.filter(i=>i!==item);if(S.sel===item)S.sel=null;save();drawInv()}
-const ITEMS={kartaP:{i:'📋',n:'Karta przyjęcia'},dziennikP:{i:'📔',n:'Dziennik pielęgniarki'},kartaZ:{i:'📋',n:'Karta zabiegu'},kartka:{i:'📝',n:'Kartka spod gazy'},teczka:{i:'🗂️',n:'Teczka pacjenta'},bezpiecznik:{i:'🔌',n:'Bezpiecznik'},klucz:{i:'🗝️',n:'Klucz'},radio:{i:'📻',n:'Radio'},notatka:{i:'📄',n:'Notatka profesora'},
- uv:{i:'🔦',n:'Lampa UV'},karta:{i:'📈',n:'Karta nocy'},srubokret:{i:'🪛',n:'Śrubokręt'},pozytywka:{i:'🎶',n:'Pozytywka'},
- rentgen:{i:'🩻',n:'Zdjęcie RTG'},magnetofon:{i:'📼',n:'Magnetofon'},magnes:{i:'🧲',n:'Magnes na sznurku'},lom:{i:'🔧',n:'Łom'},dziennik:{i:'📓',n:'Dziennik profesora'},klucz2:{i:'🗝️',n:'Klucz do drzwi'}};
+function give(item){if(!S.inv.includes(item)){S.inv.push(item);save();drawInv();const d=ITEMS[item];notice(d.i,'Znalazłeś: '+d.n,d.d||'')}}
+function take(item,msg){const d=ITEMS[item];S.inv=S.inv.filter(i=>i!==item);if(S.sel===item)S.sel=null;save();drawInv();if(msg)notice(d.i,'Użyłeś: '+d.n,msg)}
+const ITEMS={kartaP:{i:'📋',n:'Karta przyjęcia',d:'Karta przyjęcia profesora Wolańskiego. Numer teczki zamazano – zamiast niego jest równanie. Rozwiąż je, a poznasz numer teczki w Kartotece.'},dziennikP:{i:'📔',n:'Dziennik pielęgniarki',d:'Dziennik dyżurów pielęgniarki. Jest w nim wpis o dawce leku – liczba miligramów otwiera szafę w izolatce.'},kartaZ:{i:'📋',n:'Karta zabiegu',d:'Karta zabiegu z działaniem na potęgach. Wynik to numer bębna sterylizacyjnego.'},kartka:{i:'📝',n:'Kartka spod gazy',d:'Kartka z równaniem. Wynik to pozycja licznika magnetofonu.'},teczka:{i:'🗂️',n:'Teczka pacjenta',d:'Teczka pacjenta z wykresem przyjęć. Średnia z wykresu otwiera szufladę biurka.'},bezpiecznik:{i:'🔌',n:'Bezpiecznik',d:'Stary porcelanowy bezpiecznik. Pasuje do skrzynki elektrycznej w Kartotece.'},klucz:{i:'🗝️',n:'Klucz',d:'Mały klucz. Pasuje do jakiegoś zamka w tym rozdziale.'},radio:{i:'📻',n:'Radio',d:'Stare radio na baterie. Obejrzyj je, żeby posłuchać, co nadaje.'},notatka:{i:'📄',n:'Notatka profesora',d:'Notatka profesora z regułą, jak ułożyć kod do drzwi wyjściowych. Obejrzyj ją w każdej chwili.'},
+ uv:{i:'🔦',n:'Lampa UV',d:'Lampa ultrafioletowa. Gdy ją trzymasz, latarka świeci na fioletowo i pokazuje ukryte napisy.'},karta:{i:'📈',n:'Karta nocy',d:'Wykres: o której godzinie pacjent budził się z krzykiem. Najczęstsza godzina jest ważna dla zegara w izolatce.'},srubokret:{i:'🪛',n:'Śrubokręt',d:'Śrubokręt. Coś w Sali chorych jest przykręcone śrubkami…'},pozytywka:{i:'🎶',n:'Pozytywka',d:'Mała pozytywka. Obejrzyj ją – w środku jest bęben z kolcami.'},
+ rentgen:{i:'🩻',n:'Zdjęcie RTG',d:'Zdjęcie RTG z narysowanym trójkątem. Trzeci kąt mówi, jak ustawić lampę operacyjną.'},magnetofon:{i:'📼',n:'Magnetofon',d:'Magnetofon szpulowy. Trzeba przewinąć taśmę do właściwej pozycji – obejrzyj go.'},magnes:{i:'🧲',n:'Magnes na sznurku',d:'Silny magnes na długim sznurku. Przyda się tam, gdzie ręka nie sięga.'},lom:{i:'🔧',n:'Łom',d:'Ciężki łom. Można nim podważyć przybite deski.'},dziennik:{i:'📓',n:'Dziennik profesora',d:'Dziennik profesora z regułą kodu do ostatnich drzwi.'},klucz2:{i:'🗝️',n:'Klucz do drzwi',d:'Klucz do ostatnich drzwi w pokoju profesora.'}};
 
 /* ================= DŹWIĘK ================= */
 const AU={ctx:null,cur:null,evT:null,
@@ -378,9 +380,11 @@ cv.addEventListener('click',e=>{if(!$('#modal').hidden||scareRun)return;const [x
 
 /* ================= UI ================= */
 const modal=$('#modal'),paper=$('#paper');
-function openPaper(){modal.hidden=false;paper.innerHTML='';paper.scrollTop=0;return paper}
-function closePaper(){modal.hidden=true;AU.heart(false);AU.radio(false);clearInterval(tIv);timedRun=false;try{speechSynthesis.cancel()}catch(e){}}
-modal.addEventListener('click',e=>{if(e.target===modal&&!timedRun)closePaper()});
+function openPaper(){modal.hidden=false;paper.classList.remove('notice');paper.innerHTML='';paper.scrollTop=0;return paper}
+const NQ=[];function notice(icon,title,text){NQ.push({icon,title,text});setTimeout(showNotice,30)}
+function showNotice(){if(!NQ.length||!modal.hidden||scareRun){if(NQ.length&&scareRun)setTimeout(showNotice,400);return}const n=NQ.shift();const p=openPaper();p.classList.add('notice');p.append(H_('div','nicon',n.icon),el('h2',null,n.title),H_('p',null,n.text));const r=el('div','row');r.style.justifyContent='center';const b=btn('OK, rozumiem','red');b.onclick=closePaper;r.append(b);p.append(r);AU.drip()}
+function closePaper(){modal.hidden=true;setTimeout(showNotice,150);AU.heart(false);AU.radio(false);clearInterval(tIv);timedRun=false;try{speechSynthesis.cancel()}catch(e){}}
+modal.addEventListener('click',e=>{if(e.target===modal&&!timedRun&&!paper.classList.contains('notice'))closePaper()});
 let toastT;function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),4200)}
 function closeRow(p,label){const r=el('div','row');const c=btn(label||'Zamknij','sec');c.onclick=closePaper;r.append(c);p.append(r);return r}
 function wrong(p){if(p){p.classList.remove('shake');void p.offsetWidth;p.classList.add('shake')}maybeScare();if(!scareRun)AU.sting()}
@@ -444,7 +448,25 @@ const TQ=[
 ['stat','Dominanta (moda) liczb 4, 7, 7, 2, 9 to:',['7','4','5,8','9']],
 ['stat','Cena wzrosła o 10%, potem spadła o 10%. Końcowa cena jest:',['mniejsza niż na początku','taka sama','większa','nie da się określić']],
 ['stat','Prawdopodobieństwo wyrzucenia szóstki kostką:',['1/6','1/2','1/3','6']],
-['stat','Średnia arytmetyczna 4, 6, 8, 10 to:',['7','6','8','28']]
+['stat','Średnia arytmetyczna 4, 6, 8, 10 to:',['7','6','8','28']],
+['final','Liczba √50 leży między:',['7 a 8','6 a 7','8 a 9','5 a 6']],
+['final','Ile wynosi 2⁻³?',['1/8','−8','−6','8']],
+['final','Ile to 0,5% liczby 600?',['3','30','0,3','300']],
+['final','Prostopadłościan ma wymiary 2 × 3 × 4. Jego pole powierzchni to:',['52','24','26','48']],
+['final','Trójkąt o bokach 7, 24 i 25 jest:',['prostokątny','równoramienny','równoboczny','takiego trójkąta nie ma']],
+['final','Kąt między wskazówkami zegara o godzinie 2:00 ma:',['60°','30°','45°','120°']],
+['final','Ile przekątnych ma sześciokąt?',['9','6','12','3']],
+['final','Pole koła o średnicy 10 to:',['25π','100π','10π','5π']],
+['final','Rzucamy dwiema monetami. Prawdopodobieństwo, że wypadną dwa orły:',['1/4','1/2','1/3','2/3']],
+['final','Liczba 3,(3) zapisana jako ułamek zwykły to:',['10/3','33/10','3/10','1/3']],
+['final','Ile wynosi (−2)³ + (−2)²?',['−4','4','−12','12']],
+['final','Rozwiązaniem równania 2(x − 3) = x + 4 jest:',['x = 10','x = 7','x = 1','x = −2']],
+['final','Objętość sześcianu o krawędzi 0,1 m to:',['1 dm³','1 cm³','0,1 m³','10 dm³']],
+['final','Suma kątów wewnętrznych pięciokąta wynosi:',['540°','360°','720°','450°']],
+['final','NWD(36, 48) wynosi:',['12','6','4','144']],
+['final','Liczba 1,2 · 10⁻³ to:',['0,0012','0,012','1200','0,00012']],
+['final','Średnia arytmetyczna czterech liczb wynosi 10. Ich suma to:',['40','10','14','2,5']],
+['final','Wysokość trójkąta równobocznego o boku 6 wynosi:',['3√3','6√3','3√2','3']]
 ];
 let tIv=null,timedRun=false,usedQ=new Set();
 function timedTrial(o){const p=openPaper();
@@ -485,13 +507,13 @@ const HANDLERS={
  szuflada(){if(S.done.szuflada)return toast('Szuflada jest pusta.');lockPuzzle({title:'Szuflada biurka',text:'Szuflada zamknięta na kłódkę z trzema kółkami. Na mosiądzu ktoś wydrapał: „ŚREDNIO”.',digits:3,code:pad(V().mean,3),
    ok:()=>{S.done.szuflada=1;save();give('bezpiecznik');give('notatka');addNote('Notatka (I): '+NOTE1.replace(/<br>/g,' '));showNote('Szuflada',NOTE1)}})},
  skrzynka(){if(S.flags.fuse)return toast('Bezpiecznik siedzi na miejscu. Jarzeniówki brzęczą.');if(S.sel!=='bezpiecznik')return toast('Skrzynka bezpieczników. Jednego brakuje.');
-   take('bezpiecznik');S.flags.fuse=1;save();AU.bang();setTimeout(()=>AU.setHum(true),200);toast('Klik. Jarzeniówki mrugają i zapalają się…');setTimeout(()=>jump('figure'),1600)},
+   take('bezpiecznik','Wkładasz bezpiecznik do skrzynki. Klik! Jarzeniówki mrugają i zapalają się. W świetle na ścianie pojawia się rysunek.');S.flags.fuse=1;save();AU.bang();setTimeout(()=>AU.setHum(true),200);setTimeout(()=>jump('figure'),1600)},
  sciana(){if(S.done.sciana)return toast('Na ścianie: trójkąt i liczba '+V().tri[2]+'. Wieszak…');const t=V().tri;
    numPuzzle({title:'Rysunek na ścianie',intro:'W świetle jarzeniówek widać narysowany kredą trójkąt prostokątny. Przyprostokątne: '+t[0]+' i '+t[1]+'. Obok napis: „wieszak = ?”',q:()=>({q:'Ile wynosi przeciwprostokątna?',a:t[2]}),ask:'Przeciwprostokątna:',hint:'Twierdzenie Pitagorasa: a² + b² = c².',
      ok:()=>{S.done.sciana=1;save();addNote('Ściana w kartotece: przeciwprostokątna = '+t[2]+' („wieszak”).');toast('Kreda zaczyna się rozmazywać sama… zostaje liczba '+t[2]+'.')}})},
  wieszak(){const v=V();if(S.done.wieszak)return toast('Na haczyku nr '+v.tri[2]+' wisiał klucz. Już go masz.');
    gridPick({title:'Tablica z kluczami',text:'20 haczyków, na większości wiszą zardzewiałe klucze bez opisów. Który zdjąć?',n:20,correct:v.tri[2],bad:'Ten klucz kruszy się w palcach.',ok:i=>{S.done.wieszak=1;save();give('klucz');toast('Klucz nr '+i+'. Pasuje do czegoś małego.');addNote('Wieszak: klucz z haczyka nr '+i+'.')}})},
- szafka(){if(S.done.szafka)return toast('Szafka jest pusta.');if(S.sel!=='klucz')return toast('Mała szafka. Zamknięta na klucz.');take('klucz');S.done.szafka=1;save();give('radio');AU.creak();toast('Klucz obraca się z trudem. W środku stare radio.')},
+ szafka(){if(S.done.szafka)return toast('Szafka jest pusta.');if(S.sel!=='klucz')return toast('Mała szafka. Zamknięta na klucz.');take('klucz','Klucz z trudem obraca się w zamku małej szafki. Drzwiczki się otwierają.');S.done.szafka=1;save();give('radio');AU.creak()},
  okno(){const v=V();if(S.done.okno)return toast('Na szybie widać napisaną palcem liczbę '+v.win+'.');
    timedTrial({title:'Okno',intro:'Za szybą, w ciemności, stoi ktoś w szpitalnej koszuli. Nie rusza się. Na szybie pojawia się napis: „ODPOWIEDZ, ZANIM ZGAŚNIE LATARKA”.',again:'Postać za oknem zniknęła… i znów stoi. Pytania są inne.',N:5,T:60,NEED:4,cats:['fig','kat','wzor'],
      win:()=>{S.done.okno=1;save();addNote('Okno: postać napisała palcem na szybie liczbę '+v.win+'.');toast('Postać znika. Na zaparowanej szybie zostaje liczba '+v.win+'.')}})},
@@ -519,7 +541,7 @@ const HANDLERS={
    gridPick({title:'Łóżka',text:'Na ramach łóżek przykręcone są blaszki z numerami 1–16. Pod którym materacem szukać?',n:16,cols:4,correct:v.rb[2],bad:'Pod materacem coś się poruszyło. Szybko cofasz rękę.',
      ok:i=>{S.done.c2_lozka=1;save();give('notatka');addNote('Notatka (II): '+NOTE2.replace(/<br>/g,' '));showNote('Pod materacem łóżka nr '+i,NOTE2)}})},
  c2_mis(){if(S.done.c2_mis)return toast('Pluszowy miś bez wypełnienia. Patrzy szklanymi oczami.');if(S.sel!=='srubokret'){AU.whisper();return toast('Pluszowy miś na parapecie. Ma przyszyte… śrubki? Głowa jest obrócona w twoją stronę.')}
-   take('srubokret');S.done.c2_mis=1;save();give('pozytywka');toast('Odkręcasz śrubki. W środku misia – mała pozytywka.');setTimeout(()=>jump('face'),900)},
+   take('srubokret','Odkręcasz śrubki w plecach pluszowego misia. Szwy puszczają…');S.done.c2_mis=1;save();give('pozytywka');setTimeout(()=>jump('face'),900)},
  c2_wozek(){const v=V();if(S.done.c2_wozek)return toast('Na materacu wyryto liczbę '+v.win+'.');
    timedTrial({title:'Łóżko na kółkach',intro:'Łóżko samo przesuwa się o kilka centymetrów. Skrzypią kółka. Na materacu pojawiają się litery: „ZNASZ KĄTY? ZNASZ FIGURY?”',again:'Łóżko odjechało pod ścianę… i wróciło. Pytania są inne.',N:6,T:70,NEED:5,cats:['kat','fig'],
      win:()=>{S.done.c2_wozek=1;save();addNote('Łóżko na kółkach: na materacu wyryta liczba '+v.win+'.');toast('Łóżko zatrzymuje się. Na materacu wyryta liczba '+v.win+'.')}})},
@@ -538,7 +560,7 @@ const HANDLERS={
  c3_stol(){const v=V();if(S.done.c3_stol)return toast('Na stole zostały tylko skórzane pasy.');S.done.c3_stol=1;give('kartaZ');addNote('Karta zabiegu: 2^'+v.m+' · 2^'+v.n+' = 2^x, x = numer bębna.');save();showKartaZ('W świetle lampy na stole leży karta zabiegu. Zabierasz ją.')},
  c3_bebny(){const v=V();if(S.done.c3_bebny)return toast('Bęben nr '+v.k+' jest pusty.');
    gridPick({title:'Bębny sterylizacyjne',text:'Na półkach stoi 16 metalowych bębnów z numerami. Który otworzyć?',n:16,cols:4,correct:v.k,bad:'W bębnie coś zachrobotało. To tylko rdza… chyba.',ok:i=>{S.done.c3_bebny=1;save();give('klucz');addNote('Bęben nr '+i+': klucz.');toast('W bębnie nr '+i+' leży mały klucz.')}})},
- c3_szafa(){if(S.done.c3_szafa)return toast('Szafa jest pusta.');if(S.sel!=='klucz')return toast('Drewniana szafa na leki. Zamknięta na klucz.');take('klucz');S.done.c3_szafa=1;save();give('magnetofon');give('notatka');AU.creak();addNote('Notatka (III): '+NOTE3);toast('W szafie: magnetofon szpulowy i notatka.');setTimeout(()=>showNote('Notatka',NOTE3),400)},
+ c3_szafa(){if(S.done.c3_szafa)return toast('Szafa jest pusta.');if(S.sel!=='klucz')return toast('Drewniana szafa na leki. Zamknięta na klucz.');take('klucz','Otwierasz kluczem drewnianą szafę na leki.');S.done.c3_szafa=1;save();give('magnetofon');give('notatka');AU.creak();addNote('Notatka (III): '+NOTE3);toast('W szafie: magnetofon szpulowy i notatka.');setTimeout(()=>showNote('Notatka',NOTE3),400)},
  c3_gaza(){const v=V();if(S.done.c3_gaza)return toast('Pod gazą była tylko ta jedna kartka.');S.done.c3_gaza=1;give('kartka');addNote('Gaza: x : 3 + 4 = '+v.q+' → przewinąć taśmę do x.');save();showKartka('Pod brudną gazą leży kartka. Zabierasz ją.')},
  c3_okno(){const v=V();if(S.done.c3_okno)return toast('Na szybie odcisk dłoni i liczba '+v.win+'.');
    timedTrial({title:'Okno pracowni',intro:'Szyba zachodzi parą od środka, choć nikogo tu nie ma. Ktoś pisze na niej palcem pytania o wzory.',again:'Para znika i pojawia się znowu. Pytania są inne.',N:6,T:75,NEED:5,cats:['wzor','pot'],
@@ -559,10 +581,10 @@ const HANDLERS={
  c4_szafka(){if(S.done.c4_szafka)return toast('Szafka elektryczna jest pusta.');const v=V();lockPuzzle({title:'Szafka elektryczna',text:'Metalowa szafka na trzycyfrowy szyfr. Obok symbol: <b>ℓ</b> (litry).',digits:3,code:pad(v.vol,3),
    ok:()=>{S.done.c4_szafka=1;save();give('magnes');AU.creak();toast('W środku: silny magnes na długim sznurku.')}})},
  c4_dziura(){const v=V();if(S.done.c4_dziura)return toast('Dziura w podłodze. Na dnie stoi woda.');if(S.sel!=='magnes')return toast('W dziurze w podłodze coś błyszczy. Za głęboko, żeby sięgnąć ręką.');
-   take('magnes');S.done.c4_dziura=1;save();give('klucz');addNote('Klucz z dziury. Przywieszka: √'+(v.n*v.n)+'.');AU.drip();toast('Magnes przyciąga klucz. Przywieszka: √'+(v.n*v.n)+'.');setTimeout(()=>{if(Math.random()<.7)jump('face')},700)},
+   take('magnes','Spuszczasz magnes do dziury. Coś metalowego przywiera z cichym stuknięciem – to klucz z przywieszką „√'+(v.n*v.n)+'”.');S.done.c4_dziura=1;save();give('klucz');addNote('Klucz z dziury. Przywieszka: √'+(v.n*v.n)+'.');AU.drip();setTimeout(()=>{if(Math.random()<.7)jump('face')},700)},
  c4_drzwiK(){const v=V();if(S.done.c4_drzwiK)return toast('Drzwi nr '+v.n+' są otwarte. Za nimi pusty pokój.');if(S.sel!=='klucz')return toast('Wzdłuż korytarza stoją ponumerowane drzwi. Wszystkie zamknięte.');
    gridPick({title:'Drzwi w korytarzu',text:'Masz klucz z przywieszką „√'+(v.n*v.n)+'”. Które drzwi otworzyć?',n:20,cols:5,correct:v.n,bad:'Klucz nie pasuje. Zza drzwi słychać oddech.',
-     ok:i=>{take('klucz');S.done.c4_drzwiK=1;save();give('notatka');addNote('Notatka (IV): '+NOTE4);showNote('Pokój nr '+i,NOTE4)}})},
+     ok:i=>{take('klucz','Klucz pasuje do drzwi nr '+i+'. Zamek zgrzyta i drzwi się uchylają.');S.done.c4_drzwiK=1;save();give('notatka');addNote('Notatka (IV): '+NOTE4);showNote('Pokój nr '+i,NOTE4)}})},
  c4_zawor(){const v=V();if(S.done.c4_zawor)return toast('Zawór zakręcony. Cisza.');
    numPuzzle({title:'Zawór i manometr',intro:'Z rury syczy para. Manometr: ciśnienie spadło z <b>'+v.P+'</b> do <b>'+v.Q+'</b> kPa. Na zaworze skala w procentach.',q:()=>({q:'O ile procent spadło ciśnienie?',a:v.p}),ask:'Procent:',hint:'Spadek = różnica / wartość początkowa · 100%.',
      ok:()=>{S.done.c4_zawor=1;save();AU.hiss(false);addNote('Zawór: spadek ciśnienia o '+v.p+'%.');toast('Syk ustaje. W ciszy słychać, jak ktoś liczy za ścianą.');setTimeout(()=>countAloud(true),600)}})},
@@ -577,13 +599,13 @@ const HANDLERS={
  c5_kolumna(){const p=openPaper();p.append(el('h2',null,'Kolumna'),H_('p',null,'Na kolumnie wymalowano wielkimi literami: <b>MCMLXXIX</b>. Pod spodem mniejsze: „rok, w którym mnie zamknęli na zawsze”.'));S.done.c5_kolumna=1;addNote('Kolumna: MCMLXXIX (liczba rzymska).');save();closeRow(p)},
  c5_wozek(){if(S.done.c5_wozek)return toast('Wózek stoi pod ścianą. Koło wciąż się kręci.');S.done.c5_wozek=1;save();jump('dark');setTimeout(()=>{give('lom');toast('Wózek sam przetoczył się o metr. Pod siedziskiem leżał łom.')},1400)},
  c5_dziura(){if(S.done.c5_dziura)return toast('Pod deskami było tylko jedno pudełko.');if(S.sel!=='lom')return toast('Podłoga jest zerwana. Pod jedną z desek coś leży, ale deska jest przybita.');
-   take('lom');S.done.c5_dziura=1;save();give('dziennik');addNote('Notatka (V): '+NOTE5);AU.creak();showNote('Dziennik profesora',NOTE5)},
+   take('lom','Podważasz łomem przybitą deskę. Gwoździe wyskakują z jękiem drewna. Pod deską leży pudełko.');S.done.c5_dziura=1;save();give('dziennik');addNote('Notatka (V): '+NOTE5);AU.creak();showNote('Dziennik profesora',NOTE5)},
  c5_szkielet(){const v=V();if(S.done.c5_szkielet)return toast('Model szkieletu. Wzrost człowieka: '+v.h+' cm.');
    numPuzzle({title:'Model szkieletu',intro:'Anatomiczny model. Na podstawie tabliczka: <b>SKALA 1:5, wysokość modelu '+v.m+' cm</b>. Ktoś dopisał: „ile miałby ten człowiek?”',q:()=>({q:'Prawdziwy wzrost (w cm):',a:v.h}),ask:'Centymetry:',hint:'Skala 1:5 znaczy, że w rzeczywistości wszystko jest 5 razy większe.',
      ok:()=>{S.done.c5_szkielet=1;save();addNote('Szkielet: prawdziwy wzrost '+v.h+' cm.');toast('Czaszka modelu obraca się powoli w twoją stronę.')}})},
  c5_szafka(){if(S.done.c5_szafka)return toast('Szafka jest pusta.');const v=V();lockPuzzle({title:'Szafka w drzwiach',text:'Wąska szafka z zamkiem na trzy cyfry. Na drzwiczkach: „wzrost”.',digits:3,code:pad(v.h,3),ok:()=>{S.done.c5_szafka=1;save();give('klucz2');toast('W szafce: klucz do ostatnich drzwi.')}})},
  c5_kroplowka(){if(S.done.c5_kroplowka){countAloud(true);return toast('Kroplówka kapie równo. Raz… dwa… trzy…')}
-   timedTrial({title:'Ostatnie pytania profesora',intro:'Kroplówka zaczyna kapać, choć worek jest pusty. Z każdą kroplą głos profesora zadaje pytanie. To jego ostatni egzamin.',again:'Krople przyspieszają. Profesor zaczyna od nowa – innymi pytaniami.',N:8,T:110,NEED:7,cats:['fig','kat','wzor','pot','stat'],
+   timedTrial({title:'Ostatnie pytania profesora',intro:'Kroplówka zaczyna kapać, choć worek jest pusty. Z każdą kroplą głos profesora zadaje pytanie. To jego ostatni egzamin.',again:'Krople przyspieszają. Profesor zaczyna od nowa – innymi pytaniami.',N:8,T:120,NEED:7,cats:['final'],
      win:()=>{S.done.c5_kroplowka=1;save();addNote('Zdałeś ostatni egzamin profesora.');toast('Kapanie ustaje. Ktoś cicho mówi: „Dobrze. Bardzo dobrze.”');speak('Dobrze. Bardzo dobrze.')}})},
  c5_drzwi(){if(!S.inv.includes('klucz2'))return toast('Drzwi zamknięte na klucz i na szyfr.');if(!S.done.c5_kroplowka)return toast('Klucz wchodzi do zamka, ale nie chce się przekręcić. „Najpierw moje pytania” – szepcze ktoś.');
    lockPuzzle({title:'Ostatnie drzwi',text:'Klucz przekręcony. Zostaje szyfr: cztery cyfry.',digits:4,code:V().code,ok:()=>ending()})},
