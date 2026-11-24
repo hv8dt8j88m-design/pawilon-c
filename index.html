@@ -96,7 +96,8 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
 .cbox .k{font-family:var(--o);letter-spacing:.35em;font-size:14px;color:#6a5430}
 .cbox h2{font-family:var(--o);font-size:clamp(30px,6vw,46px);letter-spacing:.12em;margin:4px 0;color:#3a2a10}
 .cbox .nm{font-family:var(--h);font-size:clamp(38px,7vw,58px);color:#5a1a10;margin:6px 0}
-.cbox img{width:120px;height:150px;object-fit:cover;border:4px solid #8a6a2c;float:right;margin:0 0 8px 12px;filter:sepia(.4)}
+.cbox img{display:block;width:150px;height:190px;object-fit:cover;object-position:50% 25%;margin:8px auto 4px;border-radius:50%;border:3px solid #8a6a2c;box-shadow:0 0 0 4px #efe4c8,0 0 0 6px #8a6a2c,0 6px 14px rgba(0,0,0,.35)}
+.cbox .pc{text-align:center;font-size:13px;font-style:italic;color:#6a5434;margin:0 0 10px}
 .cbox .st{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:14px 0;text-align:left;clear:both}
 .cbox .st div{background:rgba(255,255,255,.35);border:1px solid rgba(90,70,30,.35);padding:8px 10px;font-size:15px}
 .cbox .st b{display:block;font-family:var(--o);font-size:24px;color:#3a2a10}
@@ -122,7 +123,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
     <p>Wyniki nie są gotowym szyfrem. Trzeba je zrozumieć: to może być numer teczki, łóżka, godzina, kąt albo kolejność.</p>
     <p>Gra zawiera nagłe, głośne wystraszenia. Załóż słuchawki. Zgaś światło.</p>
     <div class="seg" id="segScare"><button type="button" data-v="2">Straszenie: mocne</button><button type="button" data-v="1">łagodne</button><button type="button" data-v="0">wyłączone</button></div><br>
-    <button class="go" id="bGo" type="button">WEJDŹ</button>
+    <button class="go" id="bGo" type="button">WEJDŹ</button><br>
     <p id="contTxt" style="font-size:14px;margin-top:12px"></p>
   </div>
 </div>
@@ -230,8 +231,16 @@ const NUMW=['zero','jeden','dwa','trzy','cztery','pięć','sześć','siedem','os
 function countAloud(force){try{if(!S.sound||!('speechSynthesis' in window))return;if(!force&&(speechSynthesis.speaking||!$('#modal').hidden||!$('#story').hidden||!$('#cover').hidden))return;
   const a=R(1,9),n=R(4,8),words=[];for(let i=0;i<n&&a+i<=20;i++)words.push(NUMW[a+i]);
   const u=new SpeechSynthesisUtterance(words.join('… ')+'…');u.lang='pl-PL';u.rate=.55;u.pitch=.05;u.volume=.32;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
-function whisperName(){try{if(!S.name||!S.sound||!('speechSynthesis' in window))return;if(speechSynthesis.speaking||!$('#cover').hidden||!$('#filmWrap').hidden)return;AU.whisper();
-  const u=new SpeechSynthesisUtterance(S.name+'… '+S.name+'…');u.lang='pl-PL';u.rate=.42;u.pitch=.01;u.volume=.55;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;setTimeout(()=>speechSynthesis.speak(u),350)}catch(e){}}
+let whispering=false;
+function whisperName(force,nameOverride){try{const nm=nameOverride||S.name;if(!nm||!('speechSynthesis' in window))return;if(!force&&(!S.sound||whispering||speechSynthesis.speaking||!$('#cover').hidden||!$('#filmWrap').hidden))return;
+  whispering=true;const vs=speechSynthesis.getVoices().filter(v=>/^pl/i.test(v.lang));
+  let voice=vs.find(v=>/zosia/i.test(v.name)),rate=.45,vols=[.35,.28,.22];
+  if(!voice){voice=vs.find(v=>/google/i.test(v.name));if(voice){rate=.6;vols=[.22,.18,.14]}}
+  if(!voice)voice=vs[0];
+  const tails=['chodź…','uważaj…','za tobą…'].sort(()=>Math.random()-.5);let i=0;
+  const say=()=>{if(i>=3){whispering=false;return}const u=new SpeechSynthesisUtterance('Ej, '+nm+', '+tails[i]);u.lang='pl-PL';u.rate=rate*(i===2?.85:1);u.pitch=1;u.volume=vols[i];if(voice)u.voice=voice;i++;
+    let d=false;const f=()=>{if(d)return;d=true;setTimeout(say,2000)};u.onend=f;u.onerror=f;setTimeout(f,9000);speechSynthesis.speak(u)};
+  say()}catch(e){whispering=false}}
 function speak(text){try{if(!('speechSynthesis' in window))return false;const u=new SpeechSynthesisUtterance(text);u.lang='pl-PL';u.rate=.72;u.pitch=.2;u.volume=.9;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(e){return false}}
 
 /* ================= JUMP SCARE (zdjęcia, bez opóźnienia) ================= */
@@ -494,10 +503,10 @@ const TQ=[
 ['final','Średnia arytmetyczna czterech liczb wynosi 10. Ich suma to:',['40','10','14','2,5']],
 ['final','Wysokość trójkąta równobocznego o boku 6 wynosi:',['3√3','6√3','3√2','3']]
 ];
-let tIv=null,timedRun=false,usedQ=new Set();
+let tIv=null,timedRun=false;
 function timedTrial(o){const p=openPaper();
  const intro=again=>{p.innerHTML='';p.append(el('h2',null,o.title),H_('p',null,again?o.again:o.intro),H_('p',null,'<b>'+o.N+' pytań, '+o.T+' sekund, potrzeba '+o.NEED+' dobrych.</b>'));const r=el('div','row');const s=btn('Zaczynam','red');s.onclick=run;r.append(s);const c=btn('Jeszcze nie','sec');c.onclick=closePaper;r.append(c);p.append(r)};
- const run=()=>{let pool=TQ.filter(q=>o.cats.includes(q[0])&&!usedQ.has(q[1]));if(pool.length<o.N){usedQ=new Set();pool=TQ.filter(q=>o.cats.includes(q[0]))}const qs=shuffle(pool).slice(0,o.N);qs.forEach(q=>usedQ.add(q[1]));let i=0,good=0,left=o.T;timedRun=true;
+ const run=()=>{if(!Array.isArray(S.usedQ))S.usedQ=[];const U=S.usedQ,all=TQ.filter(q=>o.cats.includes(q[0]));let qs=shuffle(all.filter(q=>!U.includes(q[1]))).slice(0,o.N);if(qs.length<o.N){const old=all.filter(q=>U.includes(q[1])).sort((x,y)=>U.indexOf(x[1])-U.indexOf(y[1]));qs=qs.concat(old.slice(0,o.N-qs.length));qs=shuffle(qs)}qs.forEach(q=>{const k=U.indexOf(q[1]);if(k>=0)U.splice(k,1);U.push(q[1])});save();let i=0,good=0,left=o.T;timedRun=true;
   p.innerHTML='';p.append(el('h2',null,o.title));const info=el('p','sub');const tm=el('div','timer'),bar=el('i');tm.append(bar);const area=el('div');p.append(info,tm,area);AU.heart(true,900);
   clearInterval(tIv);tIv=setInterval(()=>{left-=.25;bar.style.width=Math.max(0,left/o.T*100)+'%';if(left<o.T*.3)AU.heart(true,500);if(left<=0)fin(false)},250);
   const show=()=>{info.textContent='Pytanie '+(i+1)+' z '+o.N+' · dobrze: '+good;const q=qs[i];area.innerHTML='';area.append(H_('div','prob',q[1]));const op=el('div','opts');
@@ -674,41 +683,79 @@ function endMusic(){if(!AU.ctx)return;const c=AU.ctx,t=c.currentTime;if(AU.cur)A
  const g1=c.createGain();g1.gain.value=0;g1.gain.setTargetAtTime(.09,t,4);g1.connect(AU.rev);g1.connect(AU.dry);
  [[130.8,'triangle'],[196,'triangle'],[261.6,'sine'],[329.6,'sine'],[392,'sine'],[587.3,'sine']].forEach(([f,ty],i)=>{const o=c.createOscillator(),gg=c.createGain();o.type=ty;o.frequency.value=f;gg.gain.value=i<2?.5:.25;
   const l=c.createOscillator(),lg=c.createGain();l.frequency.value=.15+i*.05;lg.gain.value=f*.004;l.connect(lg);lg.connect(o.frequency);l.start();o.connect(gg);gg.connect(g1);o.start();o.stop(t+60);l.stop(t+60)});
- const mel=[659,784,880,784,659,587,523,587,659,784,1047,988,880,784];mel.forEach((f,i)=>setTimeout(()=>AU.bell(f),9000+i*700));AU.endG=g1}
+ const mel=[659,784,880,784,659,587,523,587,659,784,1047,988,880,784];AU.melT=mel.map((f,i)=>setTimeout(()=>AU.bell(f),9000+i*700));AU.endG=g1}
+function stopEndMusic(){try{(AU.melT||[]).forEach(clearTimeout);AU.melT=[];if(AU.endG&&AU.ctx){AU.endG.gain.cancelScheduledValues(AU.ctx.currentTime);AU.endG.gain.setTargetAtTime(0,AU.ctx.currentTime,.4)}}catch(e){}}
 function playFilm(){AU.init();const W0=$('#filmWrap');W0.hidden=false;const fc=$('#film'),fx=fc.getContext('2d'),cap=$('#cap');
  const dpr=Math.min(1.5,window.devicePixelRatio||1);const W=fc.width=Math.round(innerWidth*dpr),Hh=fc.height=Math.round(innerHeight*dpr);
- let bg=null,prof=null,parts=null,done=false;loadImg('swietlica').then(i=>bg=i).catch(()=>{});const pi=new Image();pi.onload=()=>{prof=pi;buildParts()};pi.src='profesor.jpg';
- const name=S.name||'nieznajomy';
- const caps=[[3000,'Zamek puszcza. Drzwi otwierają się same.'],[8500,'Na końcu sali, w snopie światła, ktoś stoi.'],[13000,'„Dziękuję, '+name+'.”'],[17500,'„Nikt nie wierzył, że liczby prowadzą do drzwi. Ty je otworzyłeś – wszystkie.”'],[23000,'„Teraz mogę wreszcie odejść.”'],[28500,'Profesor Aleksander Wolański jest wolny. Pawilon C po raz pierwszy od lat milczy.']];
- caps.forEach(([t,tx],i)=>setTimeout(()=>{if(done)return;cap.classList.remove('on');setTimeout(()=>{cap.textContent=tx;cap.classList.add('on')},500);if(i===2)speak('Dziękuję, '+name+'.')},t));
- AU.bang();setTimeout(()=>AU.creak(),600);setTimeout(()=>{AU.creak();AU.steps()},2200);setTimeout(endMusic,6000);
- const ph=Hh*.62,pw=ph*700/898,px=W/2-pw/2,py=Hh*.12;
- function buildParts(){const c=mkCanvas(140,180),x=c.getContext('2d');x.drawImage(prof,0,0,140,180);const d=x.getImageData(0,0,140,180).data;parts=[];
-  for(let y=0;y<180;y+=2)for(let xx=0;xx<140;xx+=2){const k=(y*140+xx)*4,L=(d[k]+d[k+1]+d[k+2])/3;if(L<38)continue;parts.push({x:px+xx/140*pw,y:py+y/180*ph,c:'rgb('+d[k]+','+d[k+1]+','+d[k+2]+')',vx:(Math.random()-.5)*.6*dpr,vy:-(.4+Math.random()*1.6)*dpr,d:Math.random()*2600+(1-y/180)*900,s:(1+Math.random()*1.6)*dpr})}}
+ const name=S.name||'nieznajomy',FS='"Special Elite","Courier New",monospace',FO='"Oswald","Arial Narrow",Arial,sans-serif';
+ const IM={};['korytarz','kartoteka','maszynownia','izolatka','pracownia','swietlica'].forEach(n=>loadImg(n).then(i=>IM[n]=i).catch(()=>{}));
+ let prof=null,parts=null,done=false,tm=[],frT=0;const later=(ms,f)=>tm.push(setTimeout(()=>{if(!done)f()},ms));
+ const pi=new Image();pi.onload=()=>{prof=pi};pi.src='profesor_duch.webp';
+ /* kadr kinowy: pasy u góry i dołu */
+ const bar=Math.round(Hh*.1),VH=Hh-2*bar;
+ const cover=(img,z,fx0,fy0)=>{const s=Math.max(W/img.width,VH/img.height)*z,w=img.width*s,h=img.height*s;const x=W/2-w/2-(fx0-.5)*w*(1-1/z),y=bar+VH/2-h/2-(fy0-.5)*h*(1-1/z);fx.drawImage(img,x,y,w,h)};
+ const tint=(c,a,op)=>{if(a<=0)return;fx.globalCompositeOperation=op||'source-over';fx.fillStyle=c.replace('A',a);fx.fillRect(0,0,W,Hh);fx.globalCompositeOperation='source-over'};
+ /* napisy maszynowe */
+ let typeT=null;const say=(tx,voice)=>{clearInterval(typeT);cap.classList.remove('on');later(450,()=>{cap.textContent='';cap.classList.add('on');let k=0;typeT=setInterval(()=>{if(done){clearInterval(typeT);return}cap.textContent=tx.slice(0,++k);if(k>=tx.length)clearInterval(typeT)},38)});if(voice)later(700,()=>speak(voice))};
+ const capsT=[[900,'Ostatni zamek puszcza. Korytarz prowadzi w ciemność…'],[8600,'Każda rozwiązana zagadka zapaliła jedno światło.'],[15200,'Na końcu świetlicy, w smudze światła, ktoś czeka.'],[19600,'„Dziękuję ci, '+name+'.”','Dziękuję ci, '+name+'.'],[23400,'„Pięćdziesiąt lat nikt nie rozwiązał moich zagadek.”'],[27000,'„Nie zgadywać – liczyć. Tego zawsze uczyłem.”'],[29600,'„Teraz mogę wreszcie odejść.”'],[33600,'']];
+ capsT.forEach(([t,tx,v])=>later(t,()=>tx?say(tx,v):(clearInterval(typeT),cap.classList.remove('on'))));
+ /* dźwięk */
+ AU.bang();later(700,()=>AU.creak());later(1800,()=>AU.steps());later(4200,()=>AU.steps());later(7200,()=>AU.bell(1047));
+ [523,659,784,1047].forEach((f,i)=>later(8300+i*1550,()=>AU.bell(f)));later(14200,endMusic);
+ /* kurz w świetle */
+ const dust=[];for(let i=0;i<90;i++)dust.push({x:Math.random(),y:Math.random(),s:(.6+Math.random()*1.8)*dpr,v:.00002+Math.random()*.00005,p:Math.random()*6});
+ const ROOMS=[['kartoteka','KARTOTEKA'],['maszynownia','MASZYNOWNIA'],['izolatka','IZOLATKA'],['pracownia','PRACOWNIA']];
  const t0=performance.now();let lastP=t0;
- const fr=()=>{if(done)return;const now=performance.now(),t=now-t0,dt=Math.min(50,now-lastP);lastP=now;fx.globalCompositeOperation='source-over';fx.fillStyle='#000';fx.fillRect(0,0,W,Hh);
-  if(bg){const z=1+t/60000,bw=Math.max(W,Hh*1600/1067)*z,bh=bw*1067/1600,bx=(W-bw)/2,by=(Hh-bh)/2;const dawn=cl((t-26000)/5000,0,1),vis=cl((t-2500)/5000,0,1);
-   fx.globalAlpha=vis;fx.drawImage(bg,bx,by,bw,bh);fx.globalAlpha=1;fx.fillStyle='rgba(8,12,28,'+(.78*(1-dawn))+')';fx.fillRect(0,0,W,Hh);
-   if(dawn>0){fx.globalCompositeOperation='soft-light';fx.fillStyle='rgba(255,200,120,'+(.6*dawn)+')';fx.fillRect(0,0,W,Hh);fx.globalCompositeOperation='source-over'}}
-  const L=cl((t-7000)/8000,0,1)*(1-cl((t-30000)/4000,0,.6));if(L>0){fx.globalCompositeOperation='lighter';const cx=W/2,cy=Hh*.45,gr=fx.createRadialGradient(cx,cy,10,cx,cy,Math.max(W,Hh)*.7);gr.addColorStop(0,'rgba(255,230,180,'+(.55*L)+')');gr.addColorStop(.3,'rgba(255,200,130,'+(.22*L)+')');gr.addColorStop(1,'rgba(0,0,0,0)');fx.fillStyle=gr;fx.fillRect(0,0,W,Hh);
-   for(let i=0;i<9;i++){const a=i/9*Math.PI*2+t/9000,len=Math.max(W,Hh);fx.fillStyle='rgba(255,225,170,'+(.05*L)+')';fx.beginPath();fx.moveTo(cx,cy);fx.lineTo(cx+Math.cos(a-.05)*len,cy+Math.sin(a-.05)*len);fx.lineTo(cx+Math.cos(a+.05)*len,cy+Math.sin(a+.05)*len);fx.closePath();fx.fill()}fx.globalCompositeOperation='source-over'}
-  if(prof){const fin=cl((t-11000)/3500,0,1),diss=cl((t-21000)/1500,0,1),a=fin*(1-diss);const fl=Math.sin(t/900)*6*dpr;
-   if(a>0){fx.globalCompositeOperation='screen';fx.globalAlpha=a*.95;fx.drawImage(prof,px,py+fl,pw,ph);fx.globalAlpha=a*.25;fx.drawImage(prof,px-6*dpr,py+fl-4*dpr,pw*1.02,ph*1.02);fx.globalAlpha=1;fx.globalCompositeOperation='source-over'}
-   if(parts&&t>20500){fx.globalCompositeOperation='lighter';const tt=t-20500;parts.forEach(p=>{if(tt<p.d){if(diss>0){fx.globalAlpha=Math.min(1,diss)*.9;fx.fillStyle=p.c;fx.fillRect(p.x,p.y+fl,p.s,p.s)}return}p.x+=p.vx*dt/16+Math.sin((tt+p.d)/400)*.3;p.y+=p.vy*dt/16;const al=Math.max(0,1-(tt-p.d)/4200);if(al<=0)return;fx.globalAlpha=al;fx.fillStyle=p.c;fx.fillRect(p.x,p.y,p.s,p.s)});fx.globalAlpha=1;fx.globalCompositeOperation='source-over'}}
-  const fl2=cl((t-31500)/1500,0,1);if(fl2>0){fx.fillStyle='rgba(255,246,228,'+fl2+')';fx.fillRect(0,0,W,Hh)}
-  if(t>33500){finishFilm();return}requestAnimationFrame(fr)};
- requestAnimationFrame(fr);
- function finishFilm(){if(done)return;done=true;try{speechSynthesis.cancel()}catch(e){}cap.classList.remove('on');W0.hidden=true;showCert()}
+ const fr=()=>{if(done)return;const now=performance.now(),t=now-t0,dt=Math.min(60,now-lastP);lastP=now;fx.globalAlpha=1;fx.globalCompositeOperation='source-over';fx.fillStyle='#000';fx.fillRect(0,0,W,Hh);
+  /* SCENA 1: korytarz, latarka, najazd kamery */
+  if(t<8800){const z=1+Math.pow(cl(t/8000,0,1),2)*1.4;if(IM.korytarz)cover(IM.korytarz,z,.52,.53);
+   tint('rgba(5,8,18,A)',.82);
+   const bx=W*(.5+Math.sin(t/1300)*.12),by=bar+VH*(.6+Math.sin(t/1700)*.06),r=Math.max(W,Hh)*.32;fx.globalCompositeOperation='lighter';const g1=fx.createRadialGradient(bx,by,0,bx,by,r);g1.addColorStop(0,'rgba(255,235,190,.32)');g1.addColorStop(.6,'rgba(255,220,160,.08)');g1.addColorStop(1,'rgba(0,0,0,0)');fx.fillStyle=g1;fx.fillRect(0,0,W,Hh);
+   const gl=cl((t-3000)/4400,0,1),cx=W/2,cy=bar+VH*.53,g2=fx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,Hh)*(.08+gl*.9));g2.addColorStop(0,'rgba(255,250,235,'+(.25+gl*.75)+')');g2.addColorStop(1,'rgba(255,240,210,0)');fx.fillStyle=g2;fx.fillRect(0,0,W,Hh);fx.globalCompositeOperation='source-over';
+   if(Math.random()<.04)tint('rgba(0,0,0,A)',.5);tint('rgba(255,250,240,A)',cl((t-7200)/900,0,1))}
+  /* SCENA 2: wspomnienia — w pokojach zapalają się światła */
+  else if(t<15000){const k=Math.max(0,Math.floor((t-8800)/1550)),lt=(t-8800)-k*1550,R=ROOMS[Math.min(3,k)],im=IM[R[0]];
+   if(im){cover(im,1.05+lt/9000,.5,.5);const on=cl((lt-250)/350,0,1);tint('rgba(6,9,20,A)',.85*(1-on)+.25);if(on>0){tint('rgba(255,190,110,A)',.45*on,'soft-light');fx.globalCompositeOperation='lighter';const g=fx.createRadialGradient(W/2,bar+VH*.35,0,W/2,bar+VH*.35,W*.6);g.addColorStop(0,'rgba(255,215,150,'+(.22*on)+')');g.addColorStop(1,'rgba(0,0,0,0)');fx.fillStyle=g;fx.fillRect(0,0,W,Hh);fx.globalCompositeOperation='source-over'}
+    fx.globalAlpha=cl(lt/300,0,1)*cl((1550-lt)/300,0,1);fx.fillStyle='#f3e7cf';fx.font=Math.round(15*dpr)+'px '+FO;fx.textBaseline='top';fx.fillText('✓  '+R[1],22*dpr,bar+18*dpr);fx.globalAlpha=1}
+   tint('rgba(0,0,0,A)',1-cl(lt/160,0,1));if(t>8800&&t<9300)tint('rgba(255,250,240,A)',1-cl((t-8800)/500,0,1))}
+  /* SCENA 3–4: świetlica, profesor, rozpad w światło, świt */
+  else if(t<34600){const st=t-15000,im=IM.swietlica;if(im){cover(im,1+st/40000,.5,.42);const dawn=cl((st-16000)/3200,0,1);tint('rgba(8,12,28,A)',.8*(1-dawn)+.1);if(dawn>0)tint('rgba(255,200,120,A)',.55*dawn,'soft-light')}
+   tint('rgba(0,0,0,A)',1-cl(st/900,0,1));
+   /* snop światła z góry */
+   const L=cl((st-600)/3500,0,1),cx=W/2,cy=bar+VH*.45;fx.globalCompositeOperation='lighter';fx.fillStyle='rgba(255,228,175,'+(.10*L)+')';fx.beginPath();fx.moveTo(cx-W*.06,bar);fx.lineTo(cx+W*.06,bar);fx.lineTo(cx+W*.26,Hh-bar);fx.lineTo(cx-W*.26,Hh-bar);fx.closePath();fx.fill();
+   const g=fx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,Hh)*.55);g.addColorStop(0,'rgba(255,225,170,'+(.30*L)+')');g.addColorStop(1,'rgba(0,0,0,0)');fx.fillStyle=g;fx.fillRect(0,0,W,Hh);
+   dust.forEach(d=>{d.y-=d.v*dt;if(d.y<0)d.y=1;const x=cx+(d.x-.5)*W*.45*(.4+d.y),y=bar+d.y*VH;fx.fillStyle='rgba(255,240,210,'+(.35*L*(.5+.5*Math.sin(t/700+d.p)))+')';fx.fillRect(x+Math.sin(t/1500+d.p)*8*dpr,y,d.s,d.s)});fx.globalCompositeOperation='source-over';
+   if(prof){const come=cl((st-1800)/9000,0,1),ph=VH*(.66+.16*come),pw=ph*700/657,PW=pw,PH=ph,px=W/2-PW/2+Math.sin(t/2300)*4*dpr,py=bar+VH*.99-PH+Math.sin(t/1100)*4*dpr;const fin=cl((st-1800)/4200,0,1),diss=cl((st-15800)/1800,0,1),fl=.85+.15*Math.sin(t/180)*Math.sin(t/530),a=fin*(1-diss)*fl;if(a>0){fx.globalAlpha=a*.86;fx.drawImage(prof,px,py,PW,PH);fx.globalCompositeOperation='lighter';fx.globalAlpha=a*.18;fx.drawImage(prof,px-PW*.015,py-PH*.015,PW*1.03,PH*1.03);if(Math.random()<.05){fx.globalAlpha=a*.35;fx.drawImage(prof,px+(Math.random()-.5)*14*dpr,py,PW,PH)}const fg=fx.createRadialGradient(W/2,bar+VH*.97,0,W/2,bar+VH*.97,PW*.5);fg.addColorStop(0,'rgba(190,220,255,'+(.18*a)+')');fg.addColorStop(1,'rgba(0,0,0,0)');fx.globalAlpha=1;fx.fillStyle=fg;fx.fillRect(0,0,W,Hh);fx.globalAlpha=1;fx.globalCompositeOperation='source-over'}
+    if(!parts&&st>15000){const c=mkCanvas(120,113),x=c.getContext('2d');x.drawImage(prof,0,0,120,113);const d=x.getImageData(0,0,120,113).data;parts=[];
+     for(let y=0;y<113;y+=1)for(let xx=0;xx<120;xx+=2){const k=(y*120+xx)*4;if(d[k+3]<90||(d[k]+d[k+1]+d[k+2])/3<30)continue;parts.push({x:px+xx/120*PW,y:py+y/113*PH,c:'rgb('+Math.min(255,d[k]+40)+','+Math.min(255,d[k+1]+25)+','+d[k+2]+')',vx:(Math.random()-.5)*.7*dpr,vy:-(.5+Math.random()*1.8)*dpr,d:Math.random()*2200+(1-y/113)*1000,s:(1.2+Math.random()*1.8)*dpr})}}
+    if(parts){fx.globalCompositeOperation='lighter';const tt=st-15000;parts.forEach(p=>{if(tt<p.d){if(diss>0){fx.globalAlpha=diss*.8;fx.fillStyle=p.c;fx.fillRect(p.x,p.y,p.s,p.s)}return}p.x+=p.vx*dt/16+Math.sin((tt+p.d)/380)*.35*dpr;p.y+=p.vy*dt/16;const al=Math.max(0,1-(tt-p.d)/4500);if(al<=0)return;fx.globalAlpha=al;fx.fillStyle=p.c;fx.fillRect(p.x,p.y,p.s,p.s)});fx.globalAlpha=1;fx.globalCompositeOperation='source-over'}}
+   tint('rgba(255,246,228,A)',cl((st-18600)/1000,0,1))}
+  /* SCENA 5: plansza końcowa */
+  else{const st=t-34600,inA=cl(1-st/1400,0,1);fx.fillStyle='#f4ead6';fx.fillRect(0,0,W,Hh);
+   const a1=cl((st-600)/1400,0,1),a2=cl((st-2200)/1400,0,1),a3=cl((st-3800)/1400,0,1);fx.textAlign='center';fx.textBaseline='middle';
+   fx.globalAlpha=a1;fx.fillStyle='#2a2214';fx.font=Math.round(Math.min(W*.11,Hh*.16))+'px '+FO;fx.fillText('PAWILON  C',W/2,Hh*.36);
+   fx.fillStyle='#8a2a1a';fx.font=Math.round(Math.min(W*.032,Hh*.05))+'px '+FO;fx.fillText('Z A G A D K A   R O Z W I Ą Z A N A',W/2,Hh*.5);
+   fx.globalAlpha=a2;fx.fillStyle='#3a2f1c';fx.font=Math.round(Math.min(W*.04,Hh*.055))+'px '+FS;fx.fillText('Detektyw: '+name,W/2,Hh*.62);
+   fx.globalAlpha=a3;fx.font=Math.round(Math.min(W*.024,Hh*.036))+'px '+FS;fx.fillStyle='#5a4c33';fx.fillText('Profesor Aleksander Wolański jest wolny.',W/2,Hh*.71);fx.globalAlpha=1;fx.textAlign='left';
+   tint('rgba(255,250,240,A)',inA);if(st>8200){finishFilm();return}}
+  /* ziarno, winieta, pasy kinowe */
+  if(t<34600){fx.fillStyle='rgba(255,255,255,.035)';for(let i=0;i<60;i++)fx.fillRect(Math.random()*W,Math.random()*Hh,dpr,dpr);
+   const v=fx.createRadialGradient(W/2,Hh/2,Math.min(W,Hh)*.35,W/2,Hh/2,Math.max(W,Hh)*.75);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.6)');fx.fillStyle=v;fx.fillRect(0,0,W,Hh);
+   fx.fillStyle='#000';fx.fillRect(0,0,W,bar);fx.fillRect(0,Hh-bar,W,bar)}
+  frT=setTimeout(fr,33)};
+ fr();
+ function finishFilm(){if(done)return;done=true;tm.forEach(clearTimeout);clearTimeout(frT);clearTimeout(frT);clearTimeout(frT);clearTimeout(frT);clearTimeout(frT);clearTimeout(frT);clearTimeout(frT);clearInterval(typeT);try{speechSynthesis.cancel()}catch(e){}cap.classList.remove('on');W0.hidden=true;showCert()}
  $('#skip').onclick=finishFilm}
 function fmtTime(ms){const m=Math.round(ms/60000);return m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min'}
 function showCert(){const st=S.stats||{},solved=Object.keys(S.done).length,w=st.wrong||0;
  const rank=w<=5?'Mistrz Liczb':w<=15?'Uczeń Profesora':w<=30?'Nieustraszony Badacz':'Wytrwały Poszukiwacz';
- const b=$('#certBox');b.innerHTML='';b.append(H_('div','k','PAWILON C · 1979'),el('h2',null,'DYPLOM'),H_('p',null,'Niniejszym zaświadcza się, że'));
- const img=el('img');img.src='profesor.jpg';img.alt='Profesor Wolański';b.append(img,el('div','nm',S.name||'Nieznajomy'),H_('p',null,'przeszedł/przeszła wszystkie pięć rozdziałów Pawilonu C, rozwiązał(a) ostatnie zadanie profesora Aleksandra Wolańskiego i pozwolił(a) mu odejść w spokoju.'));
+ const b=$('#certBox');b.innerHTML='';const img=el('img');img.src='profesor_dyplom.jpg';img.alt='Profesor Wolański';
+ b.append(H_('div','k','PAWILON C · 1979'),el('h2',null,'DYPLOM'),img,el('div','pc','prof. Aleksander Wolański'),H_('p',null,'Niniejszym zaświadcza się, że'));
+ b.append(el('div','nm',S.name||'Nieznajomy'),H_('p',null,'przeszedł/przeszła wszystkie pięć rozdziałów Pawilonu C, rozwiązał(a) ostatnie zadanie profesora Aleksandra Wolańskiego i pozwolił(a) mu odejść w spokoju.'));
  b.append(el('div','rank','★ '+rank.toUpperCase()+' ★'));
  b.append(H_('div','st','<div>Czas gry<b>'+fmtTime(st.play||0)+'</b></div><div>Rozwiązane zagadki<b>'+solved+'</b></div><div>Błędne odpowiedzi<b>'+w+'</b></div><div>Przetrwane wystraszenia<b>'+(st.scares||0)+'</b></div>'));
  b.append(el('div','sig','— prof. A. Wolański'));
- const r=el('div','row');r.style.justifyContent='center';const again=btn('Zagraj jeszcze raz','red');const close=btn('Zamknij','sec');r.append(again,close);b.append(r);$('#cert').hidden=false;AU.good();
+ const r=el('div','row');r.style.justifyContent='center';const again=btn('Zagraj jeszcze raz','red');const close=btn('Zamknij','sec');r.append(again,close);b.append(r);$('#cert').hidden=false;stopEndMusic();AU.good();
  again.onclick=()=>{const sc=S.scare,so=S.sound,nm=S.name;S=newState();S.scare=sc;S.sound=so;S.name=nm;save();$('#cert').hidden=true;drawInv();loadChapter(1).then(()=>setView('izba'));$('#cover').hidden=false;$('#contTxt').textContent='Nowa gra – zagadki będą miały inne liczby.'};
  close.onclick=()=>{$('#cert').hidden=true;$('#cover').hidden=false;$('#contTxt').textContent='Gra ukończona! Możesz zacząć od nowa w Notatniku.'}}
 
@@ -731,6 +778,7 @@ if(S.finished)$('#contTxt').textContent='Gra ukończona! Możesz zacząć od now
 function askName(cb){const p=openPaper();p.append(el('h2',null,'Zanim wejdziesz…'),el('p',null,'Ktoś w środku chce wiedzieć, kim jesteś. Jak masz na imię?'));const inp=el('input','ans');inp.type='text';inp.id='nameIn';inp.maxLength=20;inp.autocomplete='off';inp.placeholder='imię';inp.style.width='100%';
  const fb=el('div','fb');const r=el('div','row');const ok=btn('Wchodzę','red');r.append(ok);p.append(inp,r,fb);
  const go=()=>{const n=inp.value.trim().replace(/[<>]/g,'');if(n.length<2){fb.className='fb no';fb.textContent='Wpisz swoje imię.';return}S.name=n.charAt(0).toUpperCase()+n.slice(1);save();closePaper();cb()};ok.onclick=go;inp.addEventListener('keydown',e=>{if(e.key==='Enter')go()});setTimeout(()=>{try{inp.focus()}catch(e){}},100)}
+
 $('#bGo').onclick=()=>{AU.init();if(AU.ctx){AU.ctx.resume().catch(()=>{});AU.ambient(CHAPTERS[S.ch].root)}$('#cover').hidden=true;if(S.finished){const sc=S.scare,so=S.sound;S=newState();S.scare=sc;S.sound=so;save();drawInv();loadChapter(1).then(()=>setView('izba'))}
  const startIntro=()=>{if(!S.seen['intro'+S.ch]){S.seen['intro'+S.ch]=1;save();story('Rozdział '+['','I','II','III','IV','V'][S.ch],CHAPTERS[S.ch].name,CHAPTERS[S.ch].intro,()=>{setTimeout(whisperName,9000)})}else setTimeout(whisperName,12000)};
  if(!S.name)askName(startIntro);else startIntro()};

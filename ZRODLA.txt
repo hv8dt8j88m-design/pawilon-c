@@ -14,3 +14,4 @@ korytarz.jpg    – https://unsplash.com/photos/UvJyFJ-qPTU
 swietlica.jpg   – https://unsplash.com/photos/OVy_dyBZPIk
 pokoj.jpg       – https://unsplash.com/photos/drFeRpob0eY
 profesor.jpg    – https://unsplash.com/photos/aCZ2hiC-iDk
+profesor_duch.webp, profesor_dyplom.jpg – https://unsplash.com/photos/Rtsn1tFsyJ8 (zdjęcie archiwalne, wycięta postać / sepia)
