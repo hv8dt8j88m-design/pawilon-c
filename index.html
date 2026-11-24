@@ -157,7 +157,7 @@ function save(){try{localStorage.setItem(SKEY,JSON.stringify(S))}catch(e){}}
 function addNote(t){if(!S.notes.includes(t)){S.notes.push(t);save()}}
 function give(item){if(!S.inv.includes(item)){S.inv.push(item);save();drawInv();toast('Nowy przedmiot: '+ITEMS[item].n)}}
 function take(item){S.inv=S.inv.filter(i=>i!==item);if(S.sel===item)S.sel=null;save();drawInv()}
-const ITEMS={teczka:{i:'🗂️',n:'Teczka pacjenta'},bezpiecznik:{i:'🔌',n:'Bezpiecznik'},klucz:{i:'🗝️',n:'Klucz'},radio:{i:'📻',n:'Radio'},notatka:{i:'📄',n:'Notatka profesora'},
+const ITEMS={kartaP:{i:'📋',n:'Karta przyjęcia'},dziennikP:{i:'📔',n:'Dziennik pielęgniarki'},kartaZ:{i:'📋',n:'Karta zabiegu'},kartka:{i:'📝',n:'Kartka spod gazy'},teczka:{i:'🗂️',n:'Teczka pacjenta'},bezpiecznik:{i:'🔌',n:'Bezpiecznik'},klucz:{i:'🗝️',n:'Klucz'},radio:{i:'📻',n:'Radio'},notatka:{i:'📄',n:'Notatka profesora'},
  uv:{i:'🔦',n:'Lampa UV'},karta:{i:'📈',n:'Karta nocy'},srubokret:{i:'🪛',n:'Śrubokręt'},pozytywka:{i:'🎶',n:'Pozytywka'},
  rentgen:{i:'🩻',n:'Zdjęcie RTG'},magnetofon:{i:'📼',n:'Magnetofon'},magnes:{i:'🧲',n:'Magnes na sznurku'},lom:{i:'🔧',n:'Łom'},dziennik:{i:'📓',n:'Dziennik profesora'},klucz2:{i:'🗝️',n:'Klucz do drzwi'}};
 
@@ -454,6 +454,9 @@ function showNote(title,html){const p=openPaper();p.append(el('h2',null,title),H
 
 /* ================= HANDLERY: ROZDZIAŁ I ================= */
 function eqText(x){const a=R(2,5),c=a+R(1,3),b=R(3,20),d=a*x+b-c*x;return a+'x + '+b+' = '+c+'x '+(d<0?'− '+(-d):'+ '+d)}
+function eqS(){const v=V();if(!v.eqS){v.eqS=eqText(v.eqx);save()}return v.eqS}
+function showKartaP(title,intro){const p=openPaper();p.append(el('h2',null,title||'Karta przyjęcia'));if(intro)p.append(el('p',null,intro));
+ p.append(H_('div',null,'<div class="stamp">PAWILON C</div><p>Pacjent: <b>WOLAŃSKI ALEKSANDER</b><br>Zawód: matematyk<br>Przyjęty: 03.11.1974<br>Nr teczki: ███</p>'),H_('div','hand','„Numer teczki to x, jeśli '+eqS()+'”'));closeRow(p)}
 function showChart(p){const v=V().chart,yrs=[1974,1975,1976,1977,1978],W=520,Hh=260;let s='<svg viewBox="0 0 '+W+' '+(Hh+50)+'" width="100%" style="max-width:520px;background:rgba(255,255,255,.25)">';
   for(let i=0;i<=5;i++){const y=Hh-i*Hh/5;s+='<line x1="50" y1="'+y+'" x2="'+(W-10)+'" y2="'+y+'" stroke="#00000033"/><text x="44" y="'+(y+5)+'" text-anchor="end" font-size="13" font-family="Special Elite">'+Math.round(i*300/5)+'</text>'}
   v.forEach((n,i)=>{const bw=60,x=70+i*88,h=n/300*Hh;s+='<rect x="'+x+'" y="'+(Hh-h)+'" width="'+bw+'" height="'+h+'" fill="#3a3a36"/><text x="'+(x+bw/2)+'" y="'+(Hh-h-6)+'" text-anchor="middle" font-size="15" font-family="Special Elite">'+n+'</text><text x="'+(x+bw/2)+'" y="'+(Hh+20)+'" text-anchor="middle" font-size="13" font-family="Special Elite">'+yrs[i]+'</text>'});
@@ -468,11 +471,9 @@ const NOTE3='„Pomnóż numer bębna przez kąt z rentgena. Zapisz jako liczbę
 const NOTE4='„Wyjście: kwadrat numeru przełącznika + numer drzwi z klucza + procent spadku ciśnienia. Wynik jako cztery cyfry.”';
 const NOTE5='„Ostatnie drzwi: rok z kolumny minus prawdziwy wzrost człowieka z modelu. Cztery cyfry. Ale najpierw odpowiedz mi na moje ostatnie pytania. — A.W.”';
 const HANDLERS={
- przescieradlo(){if(S.done.przescieradlo)return toast('Pusto. Tylko kurz i pleśń.');const v=V(),p=openPaper();AU.creak();
-   p.append(el('h2',null,'Pod prześcieradłem'),el('p',null,'Ktoś schował tu kartę przyjęcia. Rogi są nadpalone. Numer teczki zamazano, ale ktoś dopisał ołówkiem równanie.'),H_('div',null,'<div class="stamp">PAWILON C</div><p>Pacjent: <b>WOLAŃSKI ALEKSANDER</b><br>Zawód: matematyk<br>Przyjęty: 03.11.1974<br>Nr teczki: ███</p>'),H_('div','hand','„Numer teczki to x, jeśli '+eqText(v.eqx)+'”'));
-   addNote('Karta przyjęcia Wolańskiego: numer teczki = x z równania na karcie.');S.done.przescieradlo=1;save();closeRow(p,'Zapamiętaj i zamknij')},
+ przescieradlo(){if(S.done.przescieradlo)return toast('Pusto. Tylko kurz i pleśń.');AU.creak();S.done.przescieradlo=1;give('kartaP');addNote('Karta przyjęcia Wolańskiego: numer teczki = x z równania na karcie.');save();showKartaP('Pod prześcieradłem','Ktoś schował tu kartę przyjęcia. Rogi są nadpalone. Numer teczki zamazano, ale ktoś dopisał ołówkiem równanie. Zabierasz kartę.')},
  lada(){if(!S.done.przescieradlo)return toast('Tysiące teczek. Bez numeru nie znajdziesz właściwej.');if(S.done.lada)return toast('Reszta teczek jest pusta albo zbutwiała.');const v=V();
-   numPuzzle({title:'Kartoteka',intro:'Teczki są ponumerowane. Której szukasz? Rozwiąż równanie z karty przyjęcia.',q:()=>({q:eqText(v.eqx),a:v.eqx}),ask:'Numer teczki (x):',hint:'Przenieś wyrazy z x na jedną stronę, liczby na drugą. Pamiętaj o zmianie znaku.',regen:()=>{v.eqx=R(12,29);save()},
+   numPuzzle({title:'Kartoteka',intro:'Teczki są ponumerowane. Której szukasz? Rozwiąż równanie z karty przyjęcia.',q:()=>({q:eqS(),a:v.eqx}),ask:'Numer teczki (x):',hint:'Przenieś wyrazy z x na jedną stronę, liczby na drugą. Pamiętaj o zmianie znaku.',regen:()=>{v.eqx=R(12,29);v.eqS=null;save();toast('Na karcie przyjęcia ołówek sam się poruszył… równanie jest inne.')},
      ok:()=>{S.done.lada=1;save();give('teczka');addNote('Teczka nr '+v.eqx+' – w środku wykres przyjęć pacjentów.');const p=openPaper();p.append(el('h2',null,'Teczka nr '+v.eqx));showChart(p);closeRow(p)}})},
  szuflada(){if(S.done.szuflada)return toast('Szuflada jest pusta.');lockPuzzle({title:'Szuflada biurka',text:'Szuflada zamknięta na kłódkę z trzema kółkami. Na mosiądzu ktoś wydrapał: „ŚREDNIO”.',digits:3,code:pad(V().mean,3),
    ok:()=>{S.done.szuflada=1;save();give('bezpiecznik');give('notatka');addNote('Notatka (I): '+NOTE1.replace(/<br>/g,' '));showNote('Szuflada',NOTE1)}})},
@@ -496,9 +497,8 @@ const HANDLERS={
    lockPuzzle({title:'Drzwi na korytarz',text:'Ciężkie drzwi obite blachą. Zamek szyfrowy z czterema kółkami. Ktoś wydrapał obok: „A.W. – ostatnie cyfry, od najmniejszej”.',digits:4,code,ok:()=>nextChapter()})},
 
  /* ===== ROZDZIAŁ II ===== */
- c2_ksiazka(){const v=V();const p=openPaper();AU.creak();p.append(el('h2',null,'Dziennik pielęgniarki'),H_('p',null,'Książka leżąca na siatce łóżka to dziennik dyżurów. Na ostatniej stronie, drżącym pismem:'),
-   H_('div','hand','„Pacjent A.W. – zapisano '+v.D+' mg leku nasennego. Podałam tylko '+v.p+'% dawki. Nie chciałam, żeby przestał liczyć.<br>Szafę w izolatce zamknęłam na tyle, ile miligramów naprawdę dostał.”'));
-   addNote('Dziennik pielęgniarki: zapisano '+v.D+' mg, podano '+v.p+'%. Szafa w izolatce = liczba podanych mg.');S.done.c2_ksiazka=1;save();closeRow(p)},
+ c2_ksiazka(){const v=V();if(S.done.c2_ksiazka)return toast('Na siatce łóżka został tylko odcisk książki.');AU.creak();S.done.c2_ksiazka=1;give('dziennikP');
+   addNote('Dziennik pielęgniarki: zapisano '+v.D+' mg, podano '+v.p+'%. Szafa w izolatce = liczba podanych mg.');save();showDziennikP('Książka leżąca na siatce łóżka to dziennik dyżurów. Zabierasz go.')},
  c2_szafa(){if(S.done.c2_szafa)return toast('Szafa jest pusta. Na dnie zadrapania – ktoś liczył dni.');const v=V();
    lockPuzzle({title:'Szafa w izolatce',text:'Metalowa szafa z kłódką na trzy cyfry. Na drzwiach ktoś napisał markerem: „mg”.',digits:3,code:pad(v.mg,3),
      ok:()=>{S.done.c2_szafa=1;save();give('uv');give('karta');AU.creak();addNote('Szafa: lampa UV i karta nocy (wykres).');const p=openPaper();p.append(el('h2',null,'Szafa'),el('p',null,'Drzwi skrzypią. W środku: lampa ultrafioletowa i karta z wykresem. Z tyłu szafy coś drapie… potem cisza.'));nightsChart(p);closeRow(p);setTimeout(()=>{if(Math.random()<.6)jump('figure')},2500)}})},
@@ -528,13 +528,11 @@ const HANDLERS={
  c3_lampa(){const v=V();if(S.flags.lamp)return toast('Lampa operacyjna świeci zimnym światłem na stół.');
    numPuzzle({title:'Lampa operacyjna',intro:'Ogromna lampa z siedmioma soczewkami. Pokrętło obrotu ma skalę w stopniach. Na którą wartość ją ustawić?',q:()=>({q:'Kąt na pokrętle = trzeci kąt trójkąta z RTG',a:v.c}),ask:'Stopnie:',hint:'Suma kątów w trójkącie to 180°.',
      ok:()=>{S.flags.lamp=1;save();AU.bang();addNote('Lampa ustawiona na '+v.c+'°.');toast('Soczewki zapalają się jedna po drugiej. Na stole coś leży…');setTimeout(()=>jump('face'),1500)}})},
- c3_stol(){const v=V();const p=openPaper();p.append(el('h2',null,'Stół operacyjny'),H_('p',null,'W świetle lampy na stole widać kartę zabiegu. Ktoś wpisał w nią działanie:'),H_('div','prob','2<sup>'+v.m+'</sup> · 2<sup>'+v.n+'</sup> = 2<sup>x</sup>'),H_('div','hand','„x = numer bębna, w którym schowałem klucz.”'));
-   S.done.c3_stol=1;addNote('Karta zabiegu: 2^'+v.m+' · 2^'+v.n+' = 2^x, x = numer bębna.');save();closeRow(p)},
+ c3_stol(){const v=V();if(S.done.c3_stol)return toast('Na stole zostały tylko skórzane pasy.');S.done.c3_stol=1;give('kartaZ');addNote('Karta zabiegu: 2^'+v.m+' · 2^'+v.n+' = 2^x, x = numer bębna.');save();showKartaZ('W świetle lampy na stole leży karta zabiegu. Zabierasz ją.')},
  c3_bebny(){const v=V();if(S.done.c3_bebny)return toast('Bęben nr '+v.k+' jest pusty.');
    gridPick({title:'Bębny sterylizacyjne',text:'Na półkach stoi 16 metalowych bębnów z numerami. Który otworzyć?',n:16,cols:4,correct:v.k,bad:'W bębnie coś zachrobotało. To tylko rdza… chyba.',ok:i=>{S.done.c3_bebny=1;save();give('klucz');addNote('Bęben nr '+i+': klucz.');toast('W bębnie nr '+i+' leży mały klucz.')}})},
  c3_szafa(){if(S.done.c3_szafa)return toast('Szafa jest pusta.');if(S.sel!=='klucz')return toast('Drewniana szafa na leki. Zamknięta na klucz.');take('klucz');S.done.c3_szafa=1;save();give('magnetofon');give('notatka');AU.creak();addNote('Notatka (III): '+NOTE3);toast('W szafie: magnetofon szpulowy i notatka.');setTimeout(()=>showNote('Notatka',NOTE3),400)},
- c3_gaza(){const v=V();if(S.done.c3_gaza)return toast('Pod gazą była karteczka z równaniem.');const p=openPaper();p.append(el('h2',null,'Pod brudną gazą'),H_('p',null,'Kartka z licznikiem magnetofonu i równaniem:'),H_('div','prob','x : 3 + 4 = '+v.q),H_('div','hand','„Przewiń taśmę do x. Usłyszysz mnie.”'));
-   S.done.c3_gaza=1;addNote('Gaza: x : 3 + 4 = '+v.q+' → przewinąć taśmę do x.');save();closeRow(p)},
+ c3_gaza(){const v=V();if(S.done.c3_gaza)return toast('Pod gazą była tylko ta jedna kartka.');S.done.c3_gaza=1;give('kartka');addNote('Gaza: x : 3 + 4 = '+v.q+' → przewinąć taśmę do x.');save();showKartka('Pod brudną gazą leży kartka. Zabierasz ją.')},
  c3_okno(){const v=V();if(S.done.c3_okno)return toast('Na szybie odcisk dłoni i liczba '+v.win+'.');
    timedTrial({title:'Okno pracowni',intro:'Szyba zachodzi parą od środka, choć nikogo tu nie ma. Ktoś pisze na niej palcem pytania o wzory.',again:'Para znika i pojawia się znowu. Pytania są inne.',N:6,T:75,NEED:5,cats:['wzor','pot'],
      win:()=>{S.done.c3_okno=1;save();addNote('Okno pracowni: liczba '+v.win+'. Drzwi pracowni się odblokowały.');toast('Na szybie zostaje odcisk dłoni. W drzwiach pracowni coś szczęka.')}})},
@@ -588,7 +586,12 @@ const HANDLERS={
  c5_lozko(){toast('Łóżko zasłane idealnie. Na poduszce leży kartka z jednym słowem: „DZIĘKUJĘ”.')},
  c5_lampy(){AU.setHum(true);setTimeout(()=>AU.setHum(false),1500);toast('Jarzeniówki mrugają raz. Potem gasną.')}
 };
-function inspect(it){if(it==='teczka'){const p=openPaper();p.append(el('h2',null,'Teczka nr '+V().eqx));showChart(p);closeRow(p);return}
+function showDziennikP(intro){const v=V(),p=openPaper();p.append(el('h2',null,'Dziennik pielęgniarki'));if(intro)p.append(el('p',null,intro));p.append(H_('p',null,'Na ostatniej stronie, drżącym pismem:'),
+ H_('div','hand','„Pacjent A.W. – zapisano '+v.D+' mg leku nasennego. Podałam tylko '+v.p+'% dawki. Nie chciałam, żeby przestał liczyć.<br>Szafę w izolatce zamknęłam na tyle, ile miligramów naprawdę dostał.”'));closeRow(p)}
+function showKartaZ(intro){const v=V(),p=openPaper();p.append(el('h2',null,'Karta zabiegu'));if(intro)p.append(el('p',null,intro));p.append(H_('p',null,'Ktoś wpisał w nią działanie:'),H_('div','prob','2<sup>'+v.m+'</sup> · 2<sup>'+v.n+'</sup> = 2<sup>x</sup>'),H_('div','hand','„x = numer bębna, w którym schowałem klucz.”'));closeRow(p)}
+function showKartka(intro){const v=V(),p=openPaper();p.append(el('h2',null,'Kartka spod gazy'));if(intro)p.append(el('p',null,intro));p.append(H_('p',null,'Kartka z licznikiem magnetofonu i równaniem:'),H_('div','prob','x : 3 + 4 = '+v.q),H_('div','hand','„Przewiń taśmę do x. Usłyszysz mnie.”'));closeRow(p)}
+function inspect(it){if(it==='kartaP')return showKartaP();if(it==='dziennikP')return showDziennikP();if(it==='kartaZ')return showKartaZ();if(it==='kartka')return showKartka();
+ if(it==='teczka'){const p=openPaper();p.append(el('h2',null,'Teczka nr '+V().eqx));showChart(p);closeRow(p);return}
  if(it==='notatka'){showNote('Notatka profesora',[0,NOTE1,NOTE2,NOTE3,NOTE4,NOTE5][S.ch]);return}
  if(it==='radio')return radioPuzzle();
  if(it==='karta'){const p=openPaper();p.append(el('h2',null,'Karta nocy'));nightsChart(p);closeRow(p);return}
