@@ -5,3 +5,11 @@ scare1.jpg    – https://unsplash.com/photos/L0n70k7CXcY
 scare2.jpg    – https://unsplash.com/photos/DbJR10fEteE
 scare3.jpg    – https://unsplash.com/photos/Fomaz06pMaM
 scare4.jpg    – https://unsplash.com/photos/shq21o5_mXY
+sala.jpg        – https://unsplash.com/photos/sybO0dQ8hTw
+izolatka.jpg    – https://unsplash.com/photos/fmWFJ6pjrTg
+operacyjna.jpg  – https://unsplash.com/photos/xlQ8uxXlexQ
+pracownia.jpg   – https://unsplash.com/photos/HRE6Dh1u0Qs
+maszynownia.jpg – https://unsplash.com/photos/e9LrRzBPzgI
+korytarz.jpg    – https://unsplash.com/photos/UvJyFJ-qPTU
+swietlica.jpg   – https://unsplash.com/photos/OVy_dyBZPIk
+pokoj.jpg       – https://unsplash.com/photos/drFeRpob0eY

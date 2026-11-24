@@ -15,7 +15,7 @@
 html,body{margin:0;height:100%;background:#000;color:#d9d6cc;font-family:var(--f);overflow:hidden;-webkit-text-size-adjust:100%;touch-action:none;-webkit-user-select:none;user-select:none}
 button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}
 #stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
-#cv{position:absolute;inset:0;width:100%;height:100%;cursor:none}
+#cv{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
 #scare{position:fixed;inset:0;width:100%;height:100%;z-index:40;pointer-events:none}
 #hud{position:fixed;left:0;right:0;top:0;z-index:10;display:flex;align-items:center;gap:8px;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));background:linear-gradient(rgba(0,0,0,.8),rgba(0,0,0,0));pointer-events:none}
 #hud *{pointer-events:auto}
@@ -57,7 +57,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
 .wheel{display:grid;justify-items:center;gap:4px}
 .wheel .d{width:54px;height:62px;display:grid;place-items:center;font:700 38px var(--o);background:linear-gradient(#5a5a58,#1e1e1d 45%,#5a5a58);color:#f2f0e8;border-radius:4px;box-shadow:inset 0 0 10px #000}
 .wheel button{width:54px;border:none;background:#2d2d2b;color:#ddd;border-radius:3px;font-size:17px;padding:3px 0}
-.hooks{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0}
+.hooks{display:grid;grid-template-columns:repeat(var(--cols,5),1fr);gap:8px;margin:12px 0}
 .hook{padding:10px 0;background:#3a3830;color:#eadfb8;border:1px solid #1d1f1c;font:600 18px var(--o)}
 .shake{animation:shake .4s}
 @keyframes shake{20%{transform:translateX(-9px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
@@ -70,6 +70,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
 .seg{display:inline-flex;border:1px solid #6a665c;margin-top:10px}
 .seg button{background:transparent;border:none;color:#bdb8aa;padding:6px 12px;font-size:14px}
 .seg button.on{background:#cfc9b6;color:#111}
+#story{overflow:auto}
 #story .box{max-width:740px}
 #story .k{font-family:var(--o);letter-spacing:.2em;color:#8f897c;font-size:15px;text-transform:uppercase}
 #story h2{font-family:var(--o);font-size:clamp(28px,5vw,46px);letter-spacing:.1em;margin:6px 0 16px;color:#e3ddcc;font-weight:600}
@@ -80,6 +81,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
 .jr .e{border-bottom:1px dashed rgba(29,31,28,.35);padding:6px 0;font-size:16px}
 #err{position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#400;color:#fcc;padding:8px;font:14px system-ui}
 #err[hidden]{display:none}
+#load{position:fixed;left:50%;top:60%;transform:translateX(-50%);z-index:31;color:#8f897c;font-family:var(--o);letter-spacing:.2em;font-size:14px}
 </style>
 </head>
 <body>
@@ -93,14 +95,15 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
   <div>
     <h1>PAWILON C</h1>
     <div class="s">Szpital psychiatryczny w Tworkach Dolnych. Zamknięty w 1979 roku.</div>
-    <p>Gra-zagadka z jump scare'ami. Pokoje są ciemne – świeć latarką (przesuwaj palcem po ekranie), szukaj śladów, zbieraj przedmioty i używaj ich. Zadania wymagają matematyki z egzaminu ósmoklasisty.</p>
-    <p>Wyniki nie są gotowym szyfrem. Trzeba je zrozumieć: to może być numer teczki, haczyka, godzina albo kolejność.</p>
+    <p>Gra-zagadka z jump scare'ami. 5 rozdziałów. Pokoje są ciemne – świeć latarką (przesuwaj palcem po ekranie), szukaj śladów, zbieraj przedmioty i używaj ich (stuknij przedmiot na dole, potem miejsce w pokoju). Zadania wymagają matematyki z egzaminu ósmoklasisty.</p>
+    <p>Wyniki nie są gotowym szyfrem. Trzeba je zrozumieć: to może być numer teczki, łóżka, godzina, kąt albo kolejność.</p>
     <p>Gra zawiera nagłe, głośne wystraszenia. Załóż słuchawki. Zgaś światło.</p>
     <div class="seg" id="segScare"><button type="button" data-v="2">Straszenie: mocne</button><button type="button" data-v="1">łagodne</button><button type="button" data-v="0">wyłączone</button></div><br>
     <button class="go" id="bGo" type="button">WEJDŹ</button>
     <p id="contTxt" style="font-size:14px;margin-top:12px"></p>
   </div>
 </div>
+<div id="load">WCZYTYWANIE…</div>
 <div id="toast"></div>
 <div id="err" hidden></div>
 <script>window.onerror=function(m,s,l){var e=document.getElementById('err');e.hidden=false;e.textContent='Błąd: '+m+' (linia '+l+')'};</script>
@@ -112,48 +115,51 @@ function H_(t,c,h){const e=el(t,c);e.innerHTML=h;return e}
 function btn(t,c){const b=el('button','pb'+(c?' '+c:''),t);b.type='button';return b}
 const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1)),pick=a=>a[Math.floor(Math.random()*a.length)];
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const pad=(n,k)=>String(n).padStart(k,'0');
 function hash(x,y,s){let h=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263)+Math.imul(s|0,1442695041))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return (h>>>0)/4294967296}
 function vn(x,y,s){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);const a=hash(xi,yi,s),b=hash(xi+1,yi,s),c=hash(xi,yi+1,s),d=hash(xi+1,yi+1,s);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
 function fbm(x,y,o,s){let t=0,a=.5,f=1,n=0;for(let i=0;i<o;i++){t+=a*vn(x*f,y*f,s+i*17);n+=a;f*=2.03;a*=.5}return t/n}
 const cl=(v,a,b)=>v<a?a:v>b?b:v;
 function mkCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c}
 
-/* ================= OBRAZ: wymiary, gradacja nocna ================= */
+/* ================= OBRAZ ================= */
 const IW=1600,IH=1067,CW=1280,CH_=853,K=CW/IW;
 const cv=$('#cv'),g=cv.getContext('2d');
-const IMG={};
-function loadImg(n){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Nie wczytano obrazu '+n));i.src=n+'.jpg'})}
-function grade(img){const c=mkCanvas(CW,CH_),x=c.getContext('2d');x.drawImage(img,0,0,CW,CH_);const d=x.getImageData(0,0,CW,CH_),p=d.data;
+function loadImg(n){return new Promise((res,rej)=>{const i=new Image();let t=0;i.onload=()=>res(i);i.onerror=()=>{if(t++<3)setTimeout(()=>{i.src=n+'.jpg?r='+t},600*t);else rej(new Error('Nie wczytano obrazu '+n))};i.src=n+'.jpg'})}
+function grade(img,o){o=o||{};const bright=o.bright||1,glowK=o.glow==null?1:o.glow;const c=mkCanvas(CW,CH_),x=c.getContext('2d');x.drawImage(img,0,0,CW,CH_);const d=x.getImageData(0,0,CW,CH_),p=d.data;
   const glow=mkCanvas(CW,CH_),gx=glow.getContext('2d'),gd=gx.createImageData(CW,CH_),q=gd.data;
-  for(let i=0;i<p.length;i+=4){const r=p[i],gg=p[i+1],b=p[i+2],L=(.3*r+.59*gg+.11*b)/255;
-    const s=.35;let nr=L*255*(1-s)+r*s,ng=L*255*(1-s)+gg*s,nb=L*255*(1-s)+b*s;nr*=.92;ng*=.97;nb*=1.08;
-    p[i]=cl(nr,0,255);p[i+1]=cl(ng,0,255);p[i+2]=cl(nb,0,255);
-    const w=cl((L-.72)/.25,0,1);q[i]=70*w;q[i+1]=90*w;q[i+2]=130*w;q[i+3]=255}
+  for(let i=0;i<p.length;i+=4){const r=p[i],gg=p[i+1],b=p[i+2],L=(.3*r+.59*gg+.11*b)/255;const s=.35;
+    let nr=L*255*(1-s)+r*s,ng=L*255*(1-s)+gg*s,nb=L*255*(1-s)+b*s;nr*=.92*bright;ng*=.97*bright;nb*=1.08*bright;p[i]=cl(nr,0,255);p[i+1]=cl(ng,0,255);p[i+2]=cl(nb,0,255);
+    const w=cl((L-.74)/.24,0,1)*glowK;q[i]=70*w;q[i+1]=90*w;q[i+2]=130*w;q[i+3]=255}
   x.putImageData(d,0,0);gx.putImageData(gd,0,0);return {base:c,glow}}
 const NOISE=(()=>{const c=mkCanvas(200,200),x=c.getContext('2d'),d=x.createImageData(200,200);for(let i=0;i<d.data.length;i+=4){const f=fbm((i/4)%200/12,Math.floor(i/800)/12,4,61),v=200-f*90-(Math.random()>.985?80:0);d.data[i]=v;d.data[i+1]=v*.96;d.data[i+2]=v*.85;d.data[i+3]=255}x.putImageData(d,0,0);return c})();
 const GRAIN=(()=>{const c=mkCanvas(256,256),x=c.getContext('2d'),d=x.createImageData(256,256);for(let i=0;i<d.data.length;i+=4){const v=Math.random()*255;d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=255}x.putImageData(d,0,0);return c})();
 
+/* ================= WARTOŚCI ZAGADEK (losowane dla każdej gry) ================= */
+const SEQS=[{s:[1,4,9,16],n:25,h:'Kwadraty kolejnych liczb: 1², 2², 3², 4², …'},{s:[2,4,8,16],n:32,h:'Każda liczba jest dwa razy większa od poprzedniej.'},{s:[1,1,2,3,5,8],n:13,h:'Każda liczba to suma dwóch poprzednich.'},{s:[3,10,17,24],n:31,h:'Zawsze dodajemy tę samą liczbę.'},{s:[1,3,6,10,15],n:21,h:'Różnice rosną: +2, +3, +4, +5, …'},{s:[1,8,27,64],n:125,h:'Sześciany kolejnych liczb: 1³, 2³, 3³, …'},{s:[2,3,5,7,11],n:13,h:'Liczby pierwsze – dzielą się tylko przez 1 i przez siebie.'},{s:[81,27,9,3],n:1,h:'Każda liczba jest 3 razy mniejsza od poprzedniej.'},{s:[2,6,18,54],n:162,h:'Każda liczba jest 3 razy większa od poprzedniej.'},{s:[100,91,82,73],n:64,h:'Zawsze odejmujemy tę samą liczbę.'}];
+function gen1(){const eqx=R(12,29),tri=pick([[6,8,10],[5,12,13],[9,12,15],[8,15,17],[12,16,20]]);const mean=R(110,190);let v;do{v=[R(60,260),R(60,260),R(60,260),R(60,260)];v.push(5*mean-v.reduce((a,b)=>a+b,0))}while(v[4]<40||v[4]>300);
+  let sq;do{sq=pick(SEQS.slice(0,6))}while([eqx,tri[2]].includes(sq.n));let win;do{win=R(30,49)}while([eqx,tri[2],sq.n].includes(win));return {eqx,tri,chart:shuffle(v),mean,seq:sq,win}}
+function gen2(){const D=pick([500,750,1000,1250]),p=pick([20,40,60,80]),mg=D*p/100;const hour=R(2,11);let nights;do{nights=[hour,hour,hour];while(nights.length<7){const x=R(1,12);if(x!==hour&&nights.filter(n=>n===x).length<2)nights.push(x)}nights=shuffle(nights)}while(false);
+  const rb=pick([[6,8,5],[12,16,10],[10,24,13],[18,24,15]]);const sq=pick(SEQS.slice(5));const win=R(30,49);return {D,p,mg,hour,nights,rb,seq:sq,win,code:pad((rb[2]*hour)%100,2)+pad((sq.n+win)%100,2)}}
+function gen3(){const a=R(30,75),b=R(30,75),c=180-a-b;const k=R(7,16),m=R(2,k-2),x=R(4,15)*3,q=x/3+4;const win=R(30,49);return {a,b,c,k,m,n:k-m,x,q,win,code:pad(k*c,4).split('').reverse().join('')}}
+function gen4(){const dd=pick([[3,4,5],[6,8,10]]),x1=R(0,4),y1=R(0,4);const s=dd[2];let a,b,c;do{a=R(4,9);b=R(4,9);c=R(3,9)}while(a*b*c<100);const n=R(11,16);const P=pick([200,240,300,400,500]),p=pick([10,20,25,50]);const Q=P*(100-p)/100;
+  return {A:[x1,y1],B:[x1+dd[0],y1+dd[1]],s,a,b,c,vol:a*b*c,n,P,Q,p,code:pad(s*s+n+p,4)}}
+function gen5(){const m=R(32,38),h=m*5;return {m,h,year:1979,code:pad(1979-h,4)}}
+const GENS={1:gen1,2:gen2,3:gen3,4:gen4,5:gen5};
+
 /* ================= STAN ================= */
-const SKEY='pawilon-c-v1';
-function newState(){const eqx=R(12,29),tri=pick([[6,8,10],[5,12,13],[9,12,15],[8,15,17],[12,16,20]]);
-  const mean=R(110,190);let v=[];do{v=[R(60,260),R(60,260),R(60,260),R(60,260)];v.push(5*mean-v.reduce((a,b)=>a+b,0))}while(v[4]<40||v[4]>300);
-  const seqs=[{s:[1,4,9,16],n:25,h:'Kwadraty kolejnych liczb: 1², 2², 3², 4², …'},{s:[2,4,8,16],n:32,h:'Każda liczba jest dwa razy większa od poprzedniej.'},{s:[1,1,2,3,5,8],n:13,h:'Każda liczba to suma dwóch poprzednich.'},{s:[3,10,17,24],n:31,h:'Ciąg arytmetyczny – zawsze dodajemy tę samą liczbę.'},{s:[1,3,6,10,15],n:21,h:'Różnice rosną: +2, +3, +4, +5, …'},{s:[1,8,27,64],n:125,h:'Sześciany kolejnych liczb: 1³, 2³, 3³, …'}];
-  let sq;do{sq=pick(seqs)}while([eqx,tri[2]].includes(sq.n));let win;do{win=R(30,49)}while([eqx,tri[2],sq.n].includes(win));
-  return {view:'izba',sel:null,inv:[],done:{},notes:[],scare:2,sound:true,seen:{},fuse:false,
-    eq:{x:eqx},tri,chart:shuffle(v),mean,seq:sq,win}}
+const SKEY='pawilon-c-v2';
+function newState(){return {ch:1,view:'izba',sel:null,inv:[],done:{},notes:[],flags:{},scare:2,sound:true,seen:{},v:{1:gen1()}}}
 let S=newState();
-try{const r=JSON.parse(localStorage.getItem(SKEY)||'null');if(r&&r.eq&&r.tri)S=Object.assign(newState(),r)}catch(e){}
+try{const r=JSON.parse(localStorage.getItem(SKEY)||'null');if(r&&r.v&&r.ch)S=Object.assign(newState(),r)}catch(e){}
+const V=()=>S.v[S.ch];
 function save(){try{localStorage.setItem(SKEY,JSON.stringify(S))}catch(e){}}
 function addNote(t){if(!S.notes.includes(t)){S.notes.push(t);save()}}
 function give(item){if(!S.inv.includes(item)){S.inv.push(item);save();drawInv();toast('Nowy przedmiot: '+ITEMS[item].n)}}
 function take(item){S.inv=S.inv.filter(i=>i!==item);if(S.sel===item)S.sel=null;save();drawInv()}
-const ITEMS={
- teczka:{i:'🗂️',n:'Teczka nr '+0},
- bezpiecznik:{i:'🔌',n:'Bezpiecznik'},
- klucz:{i:'🗝️',n:'Klucz'},
- radio:{i:'📻',n:'Radio'},
- notatka:{i:'📄',n:'Notatka profesora'}
-};
+const ITEMS={teczka:{i:'🗂️',n:'Teczka pacjenta'},bezpiecznik:{i:'🔌',n:'Bezpiecznik'},klucz:{i:'🗝️',n:'Klucz'},radio:{i:'📻',n:'Radio'},notatka:{i:'📄',n:'Notatka profesora'},
+ uv:{i:'🔦',n:'Lampa UV'},karta:{i:'📈',n:'Karta nocy'},srubokret:{i:'🪛',n:'Śrubokręt'},pozytywka:{i:'🎶',n:'Pozytywka'},
+ rentgen:{i:'🩻',n:'Zdjęcie RTG'},magnetofon:{i:'📼',n:'Magnetofon'},magnes:{i:'🧲',n:'Magnes na sznurku'},lom:{i:'🔧',n:'Łom'},dziennik:{i:'📓',n:'Dziennik profesora'},klucz2:{i:'🗝️',n:'Klucz do drzwi'}};
 
 /* ================= DŹWIĘK ================= */
 const AU={ctx:null,cur:null,evT:null,
@@ -163,12 +169,13 @@ const AU={ctx:null,cur:null,evT:null,
   this.rev=c.createGain();this.rev.gain.value=.6;this.rev.connect(conv);conv.connect(this.master);this.dry=c.createGain();this.dry.connect(this.master);this.dry.connect(this.rev);
   const nb=c.createBuffer(1,c.sampleRate*2,c.sampleRate),nd=nb.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;this.noise=nb},
  on(v){S.sound=v;save();if(this.master)this.master.gain.setTargetAtTime(v?1:0,this.ctx.currentTime,.2)},
- ambient(root){if(!this.ctx||this.cur)return;const c=this.ctx,t=c.currentTime;const g1=c.createGain();g1.gain.value=0;g1.gain.setTargetAtTime(.07,t,3);const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=240;lp.Q.value=8;lp.connect(g1);g1.connect(this.dry);
-  [[root,'sawtooth',1],[root*1.0071,'sawtooth',1],[root/2,'sine',1.2],[root*1.414,'triangle',.18]].forEach(p=>{const o=c.createOscillator(),gg=c.createGain();o.type=p[1];o.frequency.value=p[0];gg.gain.value=p[2];o.connect(gg);gg.connect(lp);o.start()});
-  const lfo=c.createOscillator(),lg=c.createGain();lfo.frequency.value=.05;lg.gain.value=130;lfo.connect(lg);lg.connect(lp.frequency);lfo.start();
-  const hum=c.createOscillator(),hg=c.createGain();hum.type='square';hum.frequency.value=50;hg.gain.value=0;hum.connect(hg);hg.connect(this.dry);hum.start();this.hum=hg;
-  const ns=c.createBufferSource();ns.buffer=this.noise;ns.loop=true;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=380;bp.Q.value=.5;const wg=c.createGain();wg.gain.value=.025;ns.connect(bp);bp.connect(wg);wg.connect(this.dry);ns.start();
-  this.cur=g1;const loop=()=>{this.event();this.evT=setTimeout(loop,3500+Math.random()*7000)};this.evT=setTimeout(loop,4000)},
+ ambient(root){if(!this.ctx)return;const c=this.ctx,t=c.currentTime;if(this.cur){this.cur.g.gain.setTargetAtTime(0,t,1.2);const old=this.cur;setTimeout(()=>{old.o.forEach(o=>{try{o.stop()}catch(e){}})},5000)}
+  const g1=c.createGain();g1.gain.value=0;g1.gain.setTargetAtTime(.07,t,3);const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=240;lp.Q.value=8;lp.connect(g1);g1.connect(this.dry);const os=[];
+  [[root,'sawtooth',1],[root*1.0071,'sawtooth',1],[root/2,'sine',1.2],[root*1.414,'triangle',.18]].forEach(p=>{const o=c.createOscillator(),gg=c.createGain();o.type=p[1];o.frequency.value=p[0];gg.gain.value=p[2];o.connect(gg);gg.connect(lp);o.start();os.push(o)});
+  const lfo=c.createOscillator(),lg=c.createGain();lfo.frequency.value=.05;lg.gain.value=130;lfo.connect(lg);lg.connect(lp.frequency);lfo.start();os.push(lfo);
+  if(!this.hum){const hum=c.createOscillator(),hg=c.createGain();hum.type='square';hum.frequency.value=50;hg.gain.value=0;hum.connect(hg);hg.connect(this.dry);hum.start();this.hum=hg}
+  const ns=c.createBufferSource();ns.buffer=this.noise;ns.loop=true;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=380;bp.Q.value=.5;const wg=c.createGain();wg.gain.value=.025;ns.connect(bp);bp.connect(wg);wg.connect(g1);ns.start();os.push(ns);
+  this.cur={g:g1,o:os};clearTimeout(this.evT);const loop=()=>{this.event();this.evT=setTimeout(loop,3500+Math.random()*7000)};this.evT=setTimeout(loop,4000)},
  setHum(on){if(this.hum)this.hum.gain.setTargetAtTime(on?.006:0,this.ctx.currentTime,.3)},
  event(){const r=Math.random();if(r<.3)this.drip();else if(r<.52)this.steps();else if(r<.72)this.whisper();else if(r<.88)this.creak();else this.bell()},
  env(node,t,a,peak,d){const gg=this.ctx.createGain();gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(peak,t+a);gg.gain.exponentialRampToValueAtTime(.0005,t+a+d);node.connect(gg);return gg},
@@ -179,7 +186,8 @@ const AU={ctx:null,cur:null,evT:null,
   const gg=c.createGain();gg.gain.setValueAtTime(0,t);for(let i=0;i<12;i++)gg.gain.linearRampToValueAtTime(Math.random()*.11,t+.08+i*.11);gg.gain.linearRampToValueAtTime(0,t+1.5);bp.connect(gg);this.pan(gg,Math.random()<.5?-.95:.95).connect(this.rev);s.start(t);s.stop(t+1.6)},
  creak(){if(!this.ctx)return;const c=this.ctx,t=c.currentTime,s=c.createBufferSource();s.buffer=this.noise;const bp=c.createBiquadFilter();bp.type='bandpass';bp.Q.value=14;bp.frequency.setValueAtTime(260,t);bp.frequency.linearRampToValueAtTime(900,t+1.1);s.connect(bp);
   const gg=c.createGain();gg.gain.setValueAtTime(0,t);for(let i=0;i<16;i++){gg.gain.setValueAtTime(.15+Math.random()*.35,t+i*.07);gg.gain.setValueAtTime(.02,t+i*.07+.03)}gg.gain.linearRampToValueAtTime(0,t+1.2);bp.connect(gg);this.pan(gg,Math.random()*2-1).connect(this.dry);s.start(t);s.stop(t+1.3)},
- bell(){if(!this.ctx)return;const c=this.ctx,t=c.currentTime,f=pick([440,466,523,587,622]);[1,2.76,5.4].forEach((k,i)=>{const o=c.createOscillator();o.frequency.value=f*k;this.env(o,t,.01,.05/(i+1),3.5).connect(this.rev);o.start(t);o.stop(t+4)})},
+ bell(f){if(!this.ctx)return;const c=this.ctx,t=c.currentTime;f=f||pick([440,466,523,587,622]);[1,2.76,5.4].forEach((k,i)=>{const o=c.createOscillator();o.frequency.value=f*k;this.env(o,t,.01,.05/(i+1),3.5).connect(this.rev);o.start(t);o.stop(t+4)})},
+ musicbox(notes){if(!this.ctx)return;const c=this.ctx;let t=c.currentTime+.2;notes.forEach(n=>{for(let i=0;i<n;i++){const o=c.createOscillator();o.type='sine';o.frequency.value=pick([1318,1568,1760,2093,1175]);this.env(o,t,.005,.08,.9).connect(this.rev);o.start(t);o.stop(t+1);t+=.17}t+=.7})},
  sting(){if(!this.ctx)return;const c=this.ctx,t=c.currentTime;[0,1,6,11].forEach(s=>{const o=c.createOscillator();o.type='sawtooth';o.frequency.value=110*Math.pow(2,s/12);const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1400;o.connect(lp);this.env(lp,t,.01,.05,1.5).connect(this.rev);o.start(t);o.stop(t+1.7)})},
  good(){if(!this.ctx)return;const c=this.ctx;[0,7,12].forEach((s,i)=>{const t=c.currentTime+i*.16,o=c.createOscillator();o.frequency.value=330*Math.pow(2,s/12);this.env(o,t,.01,.06,1.8).connect(this.rev);o.start(t);o.stop(t+2)})},
  scream(power){if(!this.ctx)return;const c=this.ctx,t=c.currentTime,p=power||1;
@@ -187,52 +195,21 @@ const AU={ctx:null,cur:null,evT:null,
   [0,1,5,6,11].forEach(k=>{const o=c.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(220*Math.pow(2,k/12)*2,t);o.frequency.linearRampToValueAtTime(220*Math.pow(2,k/12)*2.3,t+.6);this.env(o,t,.005,.07*p,.8).connect(this.dry);o.start(t);o.stop(t+1)});
   const b=c.createOscillator();b.frequency.setValueAtTime(90,t);b.frequency.exponentialRampToValueAtTime(30,t+.7);this.env(b,t,.003,1.1*p,.7).connect(this.dry);b.start(t);b.stop(t+.9)},
  bang(){if(!this.ctx)return;const c=this.ctx,t=c.currentTime,s=c.createBufferSource();s.buffer=this.noise;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=700;s.connect(lp);this.env(lp,t,.002,1.2,.5).connect(this.dry);this.env(lp,t,.002,.6,1.6).connect(this.rev);s.start(t);s.stop(t+1)},
+ motor(on){if(!this.ctx)return;if(!on){if(this.mt){try{this.mt.stop()}catch(e){}this.mt=null}return}if(this.mt)return;const c=this.ctx,o=c.createOscillator();o.type='sawtooth';o.frequency.value=48;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=180;const gg=c.createGain();gg.gain.value=.05;o.connect(lp);lp.connect(gg);gg.connect(this.dry);o.start();this.mt=o},
+ hiss(on){if(!this.ctx)return;if(!on){if(this.hs){try{this.hs.stop()}catch(e){}this.hs=null}return}if(this.hs)return;const c=this.ctx,s=c.createBufferSource();s.buffer=this.noise;s.loop=true;const hp=c.createBiquadFilter();hp.type='highpass';hp.frequency.value=3000;const gg=c.createGain();gg.gain.value=.05;s.connect(hp);hp.connect(gg);gg.connect(this.dry);s.start();this.hs=s},
  radio(on){if(!this.ctx)return;if(!on){if(this.rs){try{this.rs.stop()}catch(e){}this.rs=null}return}const c=this.ctx,s=c.createBufferSource();s.buffer=this.noise;s.loop=true;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1800;bp.Q.value=.7;const gg=c.createGain();gg.gain.value=.09;s.connect(bp);bp.connect(gg);gg.connect(this.dry);s.start();this.rs=s},
  heart(on,rate){clearInterval(this.hb);if(!on||!this.ctx)return;const beat=()=>{const c=this.ctx,t=c.currentTime;[0,.22].forEach(d=>{const o=c.createOscillator();o.frequency.setValueAtTime(58,t+d);o.frequency.exponentialRampToValueAtTime(36,t+d+.15);this.env(o,t+d,.01,.4,.2).connect(this.dry);o.start(t+d);o.stop(t+d+.3)})};beat();this.hb=setInterval(beat,rate||900)}
 };
 function speak(text){try{if(!('speechSynthesis' in window))return false;const u=new SpeechSynthesisUtterance(text);u.lang='pl-PL';u.rate=.72;u.pitch=.2;u.volume=.9;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(e){return false}}
 
-/* ================= JUMP SCARE ================= */
+/* ================= JUMP SCARE (zdjęcia, bez opóźnienia) ================= */
 const scv=$('#scare'),sx=scv.getContext('2d');
-const FACE=(()=>{const W=600,H=760,c=mkCanvas(W,H),x=c.getContext('2d');x.fillStyle='#000';x.fillRect(0,0,W,H);
-  const sk=mkCanvas(W,H),k=sk.getContext('2d'),d=k.createImageData(W,H);for(let j=0;j<H;j++)for(let i=0;i<W;i++){const n=fbm(i/40,j/40,5,7),m=fbm(i/8,j/8,3,9),v=150+n*90+(m-.5)*40;const o=(j*W+i)*4;d.data[o]=v*.86;d.data[o+1]=v*.9;d.data[o+2]=v*.88;d.data[o+3]=255}k.putImageData(d,0,0);
-  x.save();x.beginPath();x.ellipse(300,370,205,290,0,0,7);x.clip();x.drawImage(sk,0,0);
-  const sh=x.createRadialGradient(300,330,60,300,380,320);sh.addColorStop(0,'rgba(0,0,0,0)');sh.addColorStop(1,'rgba(0,0,0,.85)');x.fillStyle=sh;x.fillRect(0,0,W,H);
-  [[218,330],[382,330]].forEach(([ex,ey])=>{const eg=x.createRadialGradient(ex,ey,8,ex,ey,78);eg.addColorStop(0,'rgba(0,0,0,1)');eg.addColorStop(.6,'rgba(0,0,0,.95)');eg.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=eg;x.beginPath();x.ellipse(ex,ey,80,66,0,0,7);x.fill();x.fillStyle='rgba(235,235,225,.95)';x.beginPath();x.arc(ex+4,ey+6,4.5,0,7);x.fill()});
-  const ng=x.createLinearGradient(300,360,300,460);ng.addColorStop(0,'rgba(0,0,0,0)');ng.addColorStop(1,'rgba(0,0,0,.6)');x.fillStyle=ng;x.beginPath();x.moveTo(290,370);x.lineTo(275,455);x.lineTo(325,455);x.lineTo(310,370);x.fill();
-  const mg=x.createRadialGradient(300,560,10,300,560,110);mg.addColorStop(0,'rgba(0,0,0,1)');mg.addColorStop(.7,'rgba(5,0,0,.95)');mg.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=mg;x.beginPath();x.ellipse(300,565,58,118,0,0,7);x.fill();
-  x.strokeStyle='rgba(20,15,15,.6)';x.lineWidth=1.4;for(let i=0;i<9;i++){x.beginPath();let px=150+hash(i,1,3)*300,py=150+hash(i,2,3)*450;x.moveTo(px,py);for(let s=0;s<6;s++){px+=(hash(i,s,4)-.5)*40;py+=hash(i,s,5)*30;x.lineTo(px,py)}x.stroke()}
-  x.restore();
-  const ed=x.createRadialGradient(300,370,170,300,370,300);ed.addColorStop(0,'rgba(0,0,0,0)');ed.addColorStop(1,'rgba(0,0,0,1)');x.fillStyle=ed;x.fillRect(0,0,W,H);
-  x.strokeStyle='#060606';x.lineCap='round';for(let i=0;i<260;i++){const side=i%2?-1:1,bx=300+side*(105+hash(i,2,8)*130),len=240+hash(i,1,8)*430,y0=60+hash(i,4,8)*60;x.globalAlpha=.35+hash(i,6,8)*.5;x.lineWidth=1+hash(i,5,8)*3;
-    x.beginPath();x.moveTo(300+side*hash(i,7,8)*90,y0);x.quadraticCurveTo(bx-side*20,y0+len*.4,bx+side*hash(i,3,8)*40,y0+len);x.stroke()}
-  x.globalAlpha=1;const tp=x.createLinearGradient(0,0,0,220);tp.addColorStop(0,'rgba(0,0,0,1)');tp.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=tp;x.fillRect(0,0,W,220);
-  return c})();
-let lastScare=0,lastWasScare=false,scareRun=false;
-function maybeScare(){if(S.scare===0||scareRun)return;const now=Date.now();if(lastWasScare||now-lastScare<15000){lastWasScare=false;return}
-  const p=S.scare===2?.55:.3;if(Math.random()<p){lastWasScare=true;lastScare=now;jump(pick(S.scare===2?['face','face','face','dark','figure']:['dark','figure','face']))}else lastWasScare=false}
-function jump(type){scareRun=true;const W=scv.width=innerWidth*devicePixelRatio,H=scv.height=innerHeight*devicePixelRatio;const t0=performance.now();const pw=S.scare===2?1:.55;
-  if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}
-  if(type==='face'){AU.scream(pw)}else if(type==='figure'){AU.bang();setTimeout(()=>AU.whisper(),300)}else if(type==='dark'){AU.whisper();setTimeout(()=>AU.scream(pw*.7),900)}else{AU.bang()}
-  document.body.classList.add('shake');setTimeout(()=>document.body.classList.remove('shake'),450);
-  const dur=type==='dark'?1900:type==='figure'?1100:900;
-  const fr=()=>{const t=(performance.now()-t0)/dur;sx.clearRect(0,0,W,H);if(t>=1){scareRun=false;sx.clearRect(0,0,W,H);return}
-    const j=(Math.random()-.5)*20*(1-t);
-    if(type==='face'){sx.fillStyle='rgba(0,0,0,'+(t<.85?.92:.92*(1-(t-.85)/.15))+')';sx.fillRect(0,0,W,H);const s=Math.min(W,H)/760*(0.75+t*.55),a=t<.08?t/.08:t>.8?(1-t)/.2:1;sx.globalAlpha=a;sx.drawImage(FACE,W/2-300*s+j,H/2-380*s+j,600*s,760*s);sx.globalAlpha=1}
-    else if(type==='figure'){const a=t<.1?t/.1:t>.7?(1-t)/.3:1;sx.fillStyle='rgba(0,0,0,'+(.6*a)+')';sx.fillRect(0,0,W,H);sx.globalAlpha=a;const fh=H*.92,fw=fh*.32,fx=W*.62+j,fy=H*.04;
-      const gr=sx.createLinearGradient(0,fy,0,fy+fh);gr.addColorStop(0,'#000');gr.addColorStop(1,'rgba(0,0,0,.2)');sx.fillStyle=gr;sx.beginPath();sx.ellipse(fx,fy+fh*.09,fw*.17,fh*.075,0,0,7);sx.fill();
-      sx.beginPath();sx.moveTo(fx-fw*.3,fy+fh*.17);sx.quadraticCurveTo(fx,fy+fh*.12,fx+fw*.3,fy+fh*.17);sx.lineTo(fx+fw*.42,fy+fh);sx.lineTo(fx-fw*.42,fy+fh);sx.closePath();sx.fill();
-      sx.fillStyle='rgba(230,230,220,.9)';sx.beginPath();sx.arc(fx-fw*.05,fy+fh*.085,2.4*devicePixelRatio,0,7);sx.arc(fx+fw*.06,fy+fh*.085,2.4*devicePixelRatio,0,7);sx.fill();sx.globalAlpha=1}
-    else if(type==='dark'){const a=t<.15?t/.15:t>.85?(1-t)/.15:1;sx.fillStyle='rgba(0,0,0,'+a+')';sx.fillRect(0,0,W,H);if(t>.45&&t<.62){const s=Math.min(W,H)/760*1.25;sx.globalAlpha=(t-.45)/.17;sx.drawImage(FACE,W/2-300*s+j,H/2-380*s+j,600*s,760*s);sx.globalAlpha=1}}
-    else{const a=t<.1?t/.1:t>.6?(1-t)/.4:1;sx.globalAlpha=a*.85;sx.fillStyle='#120c0b';const hx=W*.08+j,hy=H*.35,s=H/700;
-      for(let f=0;f<4;f++){sx.save();sx.translate(hx+f*26*s,hy+f*6*s);sx.rotate(-.25+f*.12);sx.beginPath();sx.ellipse(0,0,9*s,70*s,0,0,7);sx.fill();sx.restore()}sx.beginPath();sx.ellipse(hx+30*s,hy+120*s,62*s,70*s,0,0,7);sx.fill();sx.beginPath();sx.ellipse(hx-38*s,hy+110*s,10*s,46*s,-.7,0,7);sx.fill();sx.globalAlpha=1}
-    requestAnimationFrame(fr)};requestAnimationFrame(fr)}
-
-/* ---- nowe jump scare'y: prawdziwe zdjęcia, zero opóźnienia ---- */
 const SCIMG=['scare1','scare2','scare3','scare4'].map(n=>{const i=new Image();let tries=0;i.onerror=()=>{if(tries++<3)setTimeout(()=>{i.src=n+'.jpg?r='+tries},700*tries)};i.src=n+'.jpg';return i});
 const okImg=i=>i.complete&&i.naturalWidth>0;
-let lastScareImg=-1;
-jump=function(type){if(scareRun)return;scareRun=true;AU.init();if(AU.ctx&&AU.ctx.state!=='running')AU.ctx.resume().catch(()=>{});
+let lastScare=0,lastWasScare=false,scareRun=false,lastScareImg=-1;
+function maybeScare(){if(S.scare===0||scareRun)return;const now=Date.now();if(lastWasScare||now-lastScare<15000){lastWasScare=false;return}
+  const p=S.scare===2?.55:.3;if(Math.random()<p){lastWasScare=true;lastScare=now;jump(pick(S.scare===2?['face','face','face','dark','figure']:['dark','figure','face']))}else lastWasScare=false}
+function jump(type){if(scareRun||S.scare===0)return;scareRun=true;AU.init();if(AU.ctx&&AU.ctx.state!=='running')AU.ctx.resume().catch(()=>{});
  const dpr=Math.min(2,window.devicePixelRatio||1),W=scv.width=Math.round(innerWidth*dpr),H=scv.height=Math.round(innerHeight*dpr);
  const good=SCIMG.map((im,k)=>k).filter(k=>okImg(SCIMG[k])&&k!==lastScareImg);let idx=good.length?pick(good):lastScareImg;if(type==='figure'&&okImg(SCIMG[3]))idx=3;if(idx<0)idx=0;lastScareImg=idx;const img=SCIMG[idx];
  const pw=S.scare===2?1:.6,t0=performance.now(),delay=type==='dark'?650:0,dur=delay+(S.scare===2?800:560);let fired=false;
@@ -241,86 +218,106 @@ jump=function(type){if(scareRun)return;scareRun=true;AU.init();if(AU.ctx&&AU.ctx
  if(!delay)fire();
  const fr=()=>{const el=performance.now()-t0;sx.clearRect(0,0,W,H);if(el>=dur){scareRun=false;return}
   if(el<delay){sx.fillStyle='rgba(0,0,0,'+Math.min(1,el/220)+')';sx.fillRect(0,0,W,H);requestAnimationFrame(fr);return}
-  if(!fired)fire();const t=(el-delay)/(dur-delay);sx.fillStyle='#000';sx.fillRect(0,0,W,H);
-  const dark=t<.55&&Math.floor(el/45)%4===3;
+  if(!fired)fire();const t=(el-delay)/(dur-delay);sx.fillStyle='#000';sx.fillRect(0,0,W,H);const dark=t<.55&&Math.floor(el/45)%4===3;
   if(!dark&&okImg(img)){const base=Math.max(W,H)*(type==='figure'?.8:1.02),s=base*(1.04+t*.3),j=(Math.random()-.5)*30*dpr*(1-t),a=t>.82?(1-t)/.18:1;
-   sx.globalAlpha=a;sx.drawImage(img,W/2-s/2+j,H/2-s/2+j*.6,s,s);
-   sx.globalCompositeOperation='lighter';sx.globalAlpha=a*.2;sx.drawImage(img,W/2-s/2+j+12*dpr,H/2-s/2-4*dpr,s,s);sx.globalCompositeOperation='source-over';
+   sx.globalAlpha=a;sx.drawImage(img,W/2-s/2+j,H/2-s/2+j*.6,s,s);sx.globalCompositeOperation='lighter';sx.globalAlpha=a*.2;sx.drawImage(img,W/2-s/2+j+12*dpr,H/2-s/2-4*dpr,s,s);sx.globalCompositeOperation='source-over';
    sx.globalAlpha=.14*a;sx.fillStyle='#000';for(let y=(el/8|0)%4;y<H;y+=4*dpr)sx.fillRect(0,y,W,dpr);
    if(Math.random()<.35){sx.globalAlpha=.5*a;const by=Math.random()*H;sx.drawImage(scv,0,by,W,30*dpr,(Math.random()-.5)*60*dpr,by,W,30*dpr)}sx.globalAlpha=1}
   requestAnimationFrame(fr)};
- fr()};
+ fr()}
 addEventListener('pointerdown',()=>{if(AU.ctx&&AU.ctx.state==='suspended'&&!document.hidden&&$('#cover').hidden)AU.ctx.resume().catch(()=>{})},{capture:true});
 
-/* ================= SCENY I PUNKTY ================= */
+/* ================= ROZDZIAŁY I WIDOKI ================= */
+const CHAPTERS={
+ 1:{name:'Izba przyjęć',views:['izba','kartoteka'],root:55,
+   intro:['Pawilon C zamknięto w 1979 roku, po tym, jak z oddziału zniknął pacjent – profesor Aleksander Wolański, genialny matematyk.','Pielęgniarki mówiły, że nocami liczył na głos. Że w liczbach widział drzwi.','Wchodzisz przez wybite okno. Latarka to jedyne światło. Drzwi za tobą zamykają się same.','Gdzieś w ciemności ktoś zaczyna cicho liczyć.']},
+ 2:{name:'Sala chorych nr 7',views:['sala','izolatka'],root:49,
+   intro:['Korytarz prowadzi do sali numer 7. Profesor spędził tu pięć lat.','Metalowe łóżka stoją tak, jak je zostawiono. Na jednym z nich wciąż leży otwarta książka.','Za ścianą jest izolatka. Z jej wnętrza dochodzi cichy dźwięk pozytywki.']},
+ 3:{name:'Gabinet zabiegowy',views:['operacyjna','pracownia'],root:46.25,
+   intro:['Schody w dół prowadzą do gabinetu zabiegowego. Pachnie tu eterem i rdzą.','Na ścianie wisi zegar. Wskazówki drgają, ale nie idą do przodu.','W pracowni obok ktoś zostawił magnetofon. Taśma jest wciąż założona.']},
+ 4:{name:'Podziemia',views:['maszynownia','korytarz'],root:41.2,
+   intro:['Pod szpitalem ciągną się podziemia, których nie ma na żadnym planie.','Maszyny stoją martwe od dekad. A jednak jedna z nich jest ciepła.','W ciemnym korytarzu kapie woda. Ktoś policzył każdą kroplę.']},
+ 5:{name:'Pokój profesora',views:['swietlica','pokoj'],root:61.7,
+   intro:['Podziemia kończą się schodami do starej świetlicy. Kolumny stoją jak strażnicy.','Na końcu sali są drzwi do pokoju, w którym profesor spędził ostatnią noc.','Głos, który słyszysz od początku, jest tu wyraźny. Liczy wolno. I czeka na ciebie.']}
+};
 const VIEWS={
- izba:{name:'Izba przyjęć',img:'izba',next:'kartoteka',nextName:'Kartoteka ▶',amb:[10,12,18],
-  spots:[
-   {id:'przescieradlo',x:775,y:862,w:195,h:75,n:'Prześcieradło na podłodze'},
-   {id:'szuflada',x:1120,y:775,w:150,h:50,n:'Szuflada biurka'},
-   {id:'szafka',x:1272,y:780,w:110,h:125,n:'Szafka biurka'},
-   {id:'tabliczka',x:292,y:660,w:64,h:52,n:'Tabliczka na ścianie'},
-   {id:'wieszak',x:150,y:470,w:140,h:150,n:'Tablica z kluczami'},
-   {id:'okno',x:860,y:475,w:450,h:255,n:'Okno'},
-   {id:'krzeslo',x:1380,y:750,w:70,h:130,n:'Krzesło'}]},
- kartoteka:{name:'Kartoteka',img:'kartoteka',next:'izba',nextName:'◀ Izba przyjęć',amb:[11,12,16],
-  spots:[
-   {id:'lada',x:555,y:520,w:450,h:150,n:'Lada z dokumentami'},
-   {id:'skrzynka',x:318,y:372,w:92,h:110,n:'Skrzynka bezpieczników'},
-   {id:'sciana',x:650,y:190,w:280,h:230,n:'Ściana',needFuse:true},
-   {id:'fotel',x:855,y:460,w:75,h:62,n:'Fotel'},
-   {id:'drzwi',x:192,y:345,w:74,h:212,n:'Drzwi na korytarz'},
-   {id:'drzwi2',x:460,y:368,w:34,h:146,n:'Wąskie drzwi'},
-   {id:'okna',x:1100,y:180,w:500,h:350,n:'Okna'}]}
+ izba:{name:'Izba przyjęć',amb:[10,12,18],spots:[
+   {id:'przescieradlo',x:775,y:862,w:195,h:75},{id:'szuflada',x:1120,y:775,w:150,h:50},{id:'szafka',x:1272,y:780,w:110,h:125},{id:'tabliczka',x:292,y:660,w:64,h:52,f:1},
+   {id:'wieszak',x:150,y:470,w:140,h:150},{id:'okno',x:860,y:475,w:450,h:255},{id:'krzeslo',x:1380,y:750,w:70,h:130,f:1}]},
+ kartoteka:{name:'Kartoteka',amb:[11,12,16],spots:[
+   {id:'lada',x:555,y:520,w:450,h:150},{id:'skrzynka',x:318,y:372,w:92,h:110},{id:'sciana',x:650,y:190,w:280,h:230,need:()=>S.flags.fuse},
+   {id:'fotel',x:855,y:460,w:75,h:62,f:1},{id:'drzwi',x:192,y:345,w:74,h:212},{id:'drzwi2',x:460,y:368,w:34,h:146,f:1},{id:'okna',x:1100,y:180,w:500,h:350,f:1}]},
+ sala:{name:'Sala chorych nr 7',amb:[10,11,14],bright:.85,glow:.7,spots:[
+   {id:'c2_ksiazka',x:540,y:650,w:160,h:90},{id:'c2_lozka',x:20,y:420,w:420,h:240},{id:'c2_mis',x:1100,y:300,w:70,h:60},{id:'c2_uv',x:880,y:360,w:420,h:130,need:()=>S.sel==='uv'||S.done.c2_uv},
+   {id:'c2_kaloryfer',x:1360,y:410,w:200,h:130,f:1},{id:'c2_papiery',x:950,y:820,w:300,h:160,f:1}]},
+ izolatka:{name:'Izolatka',amb:[9,10,12],spots:[
+   {id:'c2_szafa',x:375,y:130,w:240,h:530},{id:'c2_zegar',x:240,y:295,w:55,h:60},{id:'c2_wozek',x:110,y:420,w:960,h:300},{id:'c2_drzwi',x:1400,y:390,w:160,h:300},{id:'c2_krzeslo',x:1110,y:430,w:250,h:240,f:1},{id:'c2_okno',x:800,y:0,w:400,h:360,f:1}]},
+ operacyjna:{name:'Gabinet zabiegowy',amb:[10,11,13],bright:.8,glow:.5,spots:[
+   {id:'c3_negatoskop',x:235,y:365,w:170,h:220},{id:'c3_lampa',x:210,y:0,w:440,h:310},{id:'c3_stol',x:300,y:560,w:800,h:300,need:()=>S.flags.lamp},{id:'c3_bebny',x:1150,y:270,w:450,h:300},
+   {id:'c3_szafa',x:575,y:130,w:175,h:430},{id:'c3_zegar',x:1285,y:0,w:150,h:80,f:1},{id:'c3_aparat',x:740,y:340,w:180,h:110,f:1}]},
+ pracownia:{name:'Pracownia',amb:[9,10,12],bright:.85,glow:.6,spots:[
+   {id:'c3_gaza',x:175,y:660,w:130,h:150},{id:'c3_okno',x:1130,y:0,w:200,h:310},{id:'c3_drzwi',x:330,y:105,w:150,h:355},{id:'c3_reflektor',x:915,y:170,w:130,h:160,f:1},{id:'c3_gruz',x:950,y:430,w:270,h:230,f:1}]},
+ maszynownia:{name:'Maszynownia',amb:[9,10,10],bright:.85,glow:.5,spots:[
+   {id:'c4_panel',x:940,y:290,w:230,h:330},{id:'c4_silnik',x:1260,y:260,w:230,h:400},{id:'c4_szafka',x:210,y:60,w:210,h:660},{id:'c4_zawor',x:740,y:385,w:200,h:80},{id:'c4_drzwi',x:500,y:300,w:190,h:390},{id:'c4_silnik2',x:860,y:450,w:140,h:170,f:1}]},
+ korytarz:{name:'Korytarz',amb:[8,9,11],spots:[
+   {id:'c4_skrzynka',x:1180,y:420,w:130,h:170},{id:'c4_dziura',x:620,y:720,w:180,h:130,need:()=>S.flags.power},{id:'c4_drzwiK',x:740,y:470,w:180,h:130},{id:'c4_okno',x:420,y:370,w:100,h:280},{id:'c4_lampa',x:740,y:330,w:90,h:80,f:1}]},
+ swietlica:{name:'Świetlica',amb:[9,9,11],bright:.62,glow:.25,spots:[
+   {id:'c5_kolumna',x:515,y:330,w:110,h:180},{id:'c5_dziura',x:560,y:640,w:480,h:340},{id:'c5_lampa',x:740,y:240,w:60,h:80,f:1},{id:'c5_drzwiDal',x:740,y:455,w:70,h:90,f:1},{id:'c5_okno',x:1500,y:340,w:100,h:230,f:1}]},
+ pokoj:{name:'Pokój profesora',amb:[9,10,12],bright:.65,glow:.3,spots:[
+   {id:'c5_wozek',x:400,y:570,w:140,h:180},{id:'c5_szkielet',x:155,y:455,w:100,h:300},{id:'c5_szafka',x:330,y:405,w:150,h:290},{id:'c5_kroplowka',x:840,y:440,w:60,h:270},
+   {id:'c5_drzwi',x:1050,y:405,w:150,h:290},{id:'c5_lozko',x:870,y:545,w:260,h:225,f:1},{id:'c5_lampy',x:350,y:185,w:880,h:45,f:1}]}
 };
 const DATA={};
-const FLAV=['okna','drzwi2','krzeslo','fotel','tabliczka'];
-async function loadAll(){for(const v of Object.values(VIEWS)){const im=await loadImg(v.img);DATA[v.img]=grade(im)}}
+async function loadChapter(ch){$('#load').hidden=false;for(const vn of CHAPTERS[ch].views){if(DATA[vn])continue;const im=await loadImg(vn);const o=VIEWS[vn];DATA[vn]=grade(im,{bright:o.bright,glow:o.glow})}$('#load').hidden=true}
 
-/* rysunki nakładane na zdjęcie (współrzędne zdjęcia 1600×1067) */
-function overlays(view,x){x.save();x.scale(K,K);
- if(view==='izba'){
-  if(!S.done.przescieradlo){x.fillStyle='rgba(205,200,185,.0)'}
-  // tablica z kluczami
-  x.fillStyle='#2b241c';x.fillRect(160,480,120,130);x.strokeStyle='#120d08';x.lineWidth=4;x.strokeRect(160,480,120,130);
-  x.fillStyle='#8a8070';for(let r=0;r<4;r++)for(let c=0;c<5;c++){x.beginPath();x.arc(176+c*22,500+r*30,2.5,0,7);x.fill();if(!(S.done.wieszak&&r*5+c+1===S.tri[2])&&hash(r,c,3)>.35){x.strokeStyle='#5a5246';x.lineWidth=1.5;x.beginPath();x.moveTo(176+c*22,502+r*30);x.lineTo(176+c*22,516+r*30);x.stroke()}}
-  x.fillStyle='#c9bfa6';x.font='9px "Special Elite", monospace';x.fillText('KLUCZE',196,476);
-  if(S.done.szuflada){x.fillStyle='#120c08';x.fillRect(1124,790,140,30)}
- }else{
-  // skrzynka bezpieczników
-  x.fillStyle='#4a4b48';x.fillRect(325,380,78,96);x.strokeStyle='#1e1f1d';x.lineWidth=3;x.strokeRect(325,380,78,96);x.fillStyle='#2a2b29';x.fillRect(336,394,56,64);
-  x.fillStyle=S.fuse?'#b8a070':'#111';x.fillRect(356,410,16,30);x.fillStyle='#d8c25a';x.beginPath();x.moveTo(355,385);x.lineTo(362,370);x.lineTo(369,385);x.fill();
-  if(S.fuse){x.strokeStyle='rgba(235,235,230,.85)';x.lineWidth=4;x.lineCap='round';x.beginPath();x.moveTo(690,390);x.lineTo(690,230);x.lineTo(900,390);x.closePath();x.stroke();x.strokeRect(690,372,18,18);
-   x.fillStyle='rgba(235,235,230,.9)';x.font='bold 30px Caveat, cursive';x.fillText(String(S.tri[0]),652,320);x.fillText(String(S.tri[1]),780,420);x.fillText(S.done.sciana?String(S.tri[2]):'?',810,295);
-   x.font='bold 24px Caveat, cursive';x.fillText('wieszak = ?',720,180)}
-  x.fillStyle='#1a1410';x.fillRect(868,488,10,10);
- }
+/* ---- rysunki nakładane na zdjęcia ---- */
+function overlays(view,x){x.save();x.scale(K,K);const v=V();
+ if(view==='izba'){x.fillStyle='#2b241c';x.fillRect(160,480,120,130);x.strokeStyle='#120d08';x.lineWidth=4;x.strokeRect(160,480,120,130);
+  x.fillStyle='#8a8070';for(let r=0;r<4;r++)for(let c=0;c<5;c++){x.beginPath();x.arc(176+c*22,500+r*30,2.5,0,7);x.fill();if(!(S.done.wieszak&&r*5+c+1===v.tri[2])&&hash(r,c,3)>.35){x.strokeStyle='#5a5246';x.lineWidth=1.5;x.beginPath();x.moveTo(176+c*22,502+r*30);x.lineTo(176+c*22,516+r*30);x.stroke()}}
+  x.fillStyle='#c9bfa6';x.font='9px "Special Elite", monospace';x.fillText('KLUCZE',196,476);if(S.done.szuflada){x.fillStyle='#120c08';x.fillRect(1124,790,140,30)}}
+ else if(view==='kartoteka'){x.fillStyle='#4a4b48';x.fillRect(325,380,78,96);x.strokeStyle='#1e1f1d';x.lineWidth=3;x.strokeRect(325,380,78,96);x.fillStyle='#2a2b29';x.fillRect(336,394,56,64);
+  x.fillStyle=S.flags.fuse?'#b8a070':'#111';x.fillRect(356,410,16,30);x.fillStyle='#d8c25a';x.beginPath();x.moveTo(355,385);x.lineTo(362,370);x.lineTo(369,385);x.fill();
+  if(S.flags.fuse){x.strokeStyle='rgba(235,235,230,.85)';x.lineWidth=4;x.lineCap='round';x.beginPath();x.moveTo(690,390);x.lineTo(690,230);x.lineTo(900,390);x.closePath();x.stroke();x.strokeRect(690,372,18,18);
+   x.fillStyle='rgba(235,235,230,.9)';x.font='bold 30px Caveat, cursive';x.fillText(String(v.tri[0]),652,320);x.fillText(String(v.tri[1]),780,420);x.fillText(S.done.sciana?String(v.tri[2]):'?',810,295);x.font='bold 24px Caveat, cursive';x.fillText('wieszak = ?',720,180)}}
+ else if(view==='sala'){if(S.sel==='uv'||S.done.c2_uv){const d=Math.hypot((1090*K)-LX,(425*K)-LY);const a=S.done.c2_uv?.35:cl(1-d/260,0,1)*.95;x.globalAlpha=a;x.fillStyle='#b98cff';x.font='bold 34px Caveat, cursive';x.save();x.translate(900,410);x.rotate(-.03);
+   x.fillText('ROMB: przekątne '+v.rb[0]+' i '+v.rb[1],0,0);x.fillText('jego bok = moje łóżko',40,44);x.restore();x.globalAlpha=1}}
+ else if(view==='izolatka'){x.fillStyle='#120d0a';x.fillRect(1410,395,140,290);x.strokeStyle='#2a221a';x.lineWidth=5;x.strokeRect(1410,395,140,290);x.fillStyle='#3a3026';x.fillRect(1425,415,110,110);x.fillRect(1425,545,110,120);
+  x.fillStyle='#8a7a5a';x.beginPath();x.arc(1430,560,6,0,7);x.fill();x.fillStyle='#4a4b48';x.fillRect(1440,575,40,52);x.fillStyle='#111';for(let i=0;i<4;i++)x.fillRect(1444+i*9,588,6,20);
+  if(S.done.c2_zegar){x.fillStyle='rgba(0,0,0,.8)';x.fillRect(240,350,50,26)}}
+ else if(view==='operacyjna'){if(S.done.c3_negatoskop||S.inv.includes('rentgen')){}if(S.flags.lamp){x.fillStyle='rgba(230,240,255,.18)';x.beginPath();x.moveTo(300,180);x.lineTo(560,180);x.lineTo(1000,800);x.lineTo(250,820);x.closePath();x.fill()}}
+ else if(view==='pracownia'){x.fillStyle='#4a4b48';x.fillRect(440,270,30,46);x.fillStyle='#111';for(let i=0;i<4;i++)x.fillRect(442,276+i*10,26,6)}
+ else if(view==='maszynownia'){if(S.flags.power){x.fillStyle='rgba(120,255,120,.55)';for(let i=0;i<6;i++){x.beginPath();x.arc(980+i*30,320,4,0,7);x.fill()}}x.fillStyle='#c8c2b0';x.fillRect(1300,480,120,60);x.fillStyle='#222';x.font='13px "Special Elite", monospace';x.fillText('ZBIORNIK OLEJU',1305,498);x.fillText(v.a+' × '+v.b+' × '+v.c+' dm',1305,520)}
+ else if(view==='korytarz'){if(S.flags.power&&!S.done.c4_dziura){x.fillStyle='rgba(255,230,160,.7)';x.beginPath();x.arc(710,800,3,0,7);x.fill()}}
+ else if(view==='swietlica'){x.fillStyle='rgba(30,25,20,.85)';x.font='bold 40px "Special Elite", monospace';x.save();x.translate(522,600);x.rotate(-.02);x.fillText('MCMLXXIX',0,0);x.restore()}
+ else if(view==='pokoj'){x.fillStyle='#d8d0b8';x.fillRect(150,520,60,40);x.fillStyle='#222';x.font='12px "Special Elite", monospace';x.fillText('SKALA 1:5',152,537);x.fillText('h = '+v.m+' cm',152,553);
+  x.fillStyle='#4a4b48';x.fillRect(1160,520,30,48);x.fillStyle='#111';for(let i=0;i<4;i++)x.fillRect(1162,526+i*10,26,6)}
  x.restore()}
+function extraLights(view){const L=[];if(view==='kartoteka'&&S.flags.fuse)L.push({full:1,c:[110,118,108]});
+ if(view==='operacyjna'&&S.flags.lamp)L.push({x:620,y:600,r:520,c:[220,228,240]});
+ if(view==='korytarz'&&S.flags.power){L.push({x:780,y:390,r:420,c:[220,200,150]});L.push({x:810,y:470,r:200,c:[200,180,140]})}
+ if(view==='maszynownia'&&S.flags.power)L.push({x:1050,y:330,r:300,c:[90,160,90]});return L}
 
-/* ================= RENDER (latarka) ================= */
-let LX=CW*.5,LY=CH_*.55,TX=LX,TY=LY,flick=1,lightsOn=false;
+/* ================= RENDER ================= */
+let LX=CW*.5,LY=CH_*.55,TX=LX,TY=LY,flick=1,lastF=0;
 const LM=mkCanvas(CW,CH_),lm=LM.getContext('2d'),BASE=mkCanvas(CW,CH_),bx=BASE.getContext('2d');
-const dust=[...Array(70)].map((_,i)=>({x:Math.random()*CW,y:Math.random()*CH_,v:.1+Math.random()*.3,r:.5+Math.random()*1.4}));
-let glints=[];
-let lastF=0;
-function frame(){const now=performance.now();if(now-lastF<33||document.hidden){requestAnimationFrame(frame);return}lastF=now;LX+=(TX-LX)*.22;LY+=(TY-LY)*.22;const v=VIEWS[S.view],D=DATA[v.img];if(!D){requestAnimationFrame(frame);return}
+const dust=[...Array(70)].map(()=>({x:Math.random()*CW,y:Math.random()*CH_,v:.1+Math.random()*.3,r:.5+Math.random()*1.4}));
+function frame(){const now=performance.now();if(now-lastF<33||document.hidden){requestAnimationFrame(frame);return}lastF=now;LX+=(TX-LX)*.22;LY+=(TY-LY)*.22;
+  const vw=VIEWS[S.view],D=DATA[S.view];if(!D||!CHAPTERS[S.ch].views.includes(S.view)||!V()){requestAnimationFrame(frame);return}
   flick=.9+.1*vn(now/220,0,3)+(Math.random()<.004?-.5:0);
-  bx.drawImage(D.base,0,0);overlays(S.view,bx);
-  const amb=v.amb,lit=S.view==='kartoteka'&&S.fuse;
-  lm.globalCompositeOperation='source-over';lm.fillStyle='rgb('+amb.join(',')+')';lm.fillRect(0,0,CW,CH_);lm.globalCompositeOperation='lighter';
-  lm.globalAlpha=.9;lm.drawImage(D.glow,0,0);lm.globalAlpha=1;
-  if(lit){const on=Math.random()>.03;lm.fillStyle=on?'rgba(110,118,108,1)':'rgba(30,32,30,1)';lm.fillRect(0,0,CW,CH_)}
+  bx.drawImage(D.base,0,0);try{overlays(S.view,bx)}catch(e){bx.restore()}
+  lm.globalCompositeOperation='source-over';lm.fillStyle='rgb('+vw.amb.join(',')+')';lm.fillRect(0,0,CW,CH_);lm.globalCompositeOperation='lighter';lm.globalAlpha=.9;lm.drawImage(D.glow,0,0);lm.globalAlpha=1;
+  extraLights(S.view).forEach(l=>{const on=Math.random()>.03;if(l.full){lm.fillStyle=on?'rgb('+l.c.join(',')+')':'rgb(30,32,30)';lm.fillRect(0,0,CW,CH_);return}const gx=l.x*K,gy=l.y*K,gr=lm.createRadialGradient(gx,gy,4,gx,gy,l.r*K);const k=on?1:.3;
+    gr.addColorStop(0,'rgba('+l.c.join(',')+','+k+')');gr.addColorStop(1,'rgba(0,0,0,0)');lm.fillStyle=gr;lm.fillRect(0,0,CW,CH_)});
   const R1=290*flick,fg=lm.createRadialGradient(LX,LY,6,LX,LY,R1);fg.addColorStop(0,'rgba(255,246,225,1)');fg.addColorStop(.35,'rgba(235,222,195,.85)');fg.addColorStop(.75,'rgba(120,112,98,.25)');fg.addColorStop(1,'rgba(0,0,0,0)');lm.fillStyle=fg;lm.fillRect(0,0,CW,CH_);
   const fg2=lm.createRadialGradient(LX,LY,R1*.5,LX,LY,R1*1.9);fg2.addColorStop(0,'rgba(60,56,50,.5)');fg2.addColorStop(1,'rgba(0,0,0,0)');lm.fillStyle=fg2;lm.fillRect(0,0,CW,CH_);
+  if(S.sel==='uv'){const ug=lm.createRadialGradient(LX,LY,4,LX,LY,R1*.8);ug.addColorStop(0,'rgba(120,60,255,.55)');ug.addColorStop(1,'rgba(0,0,0,0)');lm.fillStyle=ug;lm.fillRect(0,0,CW,CH_)}
   g.globalCompositeOperation='source-over';g.drawImage(BASE,0,0);g.globalCompositeOperation='multiply';g.drawImage(LM,0,0);g.globalCompositeOperation='screen';
   dust.forEach(d=>{d.y-=d.v;d.x+=Math.sin(now/1500+d.r*9)*.2;if(d.y<0){d.y=CH_;d.x=Math.random()*CW}const dd=Math.hypot(d.x-LX,d.y-LY);if(dd<R1){g.fillStyle='rgba(240,235,220,'+(.5*(1-dd/R1))+')';g.beginPath();g.arc(d.x,d.y,d.r,0,7);g.fill()}});
-  v.spots.forEach((sp,i)=>{if(S.done[sp.id])return;if(sp.needFuse&&!S.fuse)return;const minor=FLAV.includes(sp.id);
+  vw.spots.forEach((sp,i)=>{if(S.done[sp.id]&&!sp.f)return;if(sp.need&&!sp.need())return;const minor=!!sp.f;
     const cx=(sp.x+sp.w/2)*K,cy=(sp.y+sp.h/2)*K,dd=Math.hypot(cx-LX,cy-LY),near=Math.max(0,1-dd/220),pulse=.5+.5*Math.sin(now/650+i*1.7);
-    // gęstsza mgiełka wokół przedmiotu – widoczna zawsze, mocniejsza w świetle latarki
     const fr=cl(Math.max(sp.w,sp.h)*K*.5,32,90)*(minor?.7:1),fa=(minor?.025:.045)+.025*pulse+.07*near;
     for(let k=0;k<3;k++){const ox=Math.sin(now/1900+k*2.1+i)*fr*.35,oy=Math.cos(now/2300+k*1.3+i)*fr*.2,gr=g.createRadialGradient(cx+ox,cy+oy,2,cx+ox,cy+oy,fr*(1-k*.18));
       gr.addColorStop(0,'rgba(205,212,225,'+fa+')');gr.addColorStop(1,'rgba(205,212,225,0)');g.fillStyle=gr;g.beginPath();g.arc(cx+ox,cy+oy,fr,0,7);g.fill()}
-    // migoczący błysk (gwiazdka)
     const sa=(minor?.1:.2)*(.3+.7*pulse)+.35*near,sz=(minor?3.5:5)+2*pulse+4*near,sxx=cx+Math.sin(now/900+i)*4,syy=cy-6;
     g.fillStyle='rgba(255,250,225,'+Math.min(1,sa)+')';g.beginPath();g.moveTo(sxx,syy-sz);g.lineTo(sxx+sz*.18,syy-sz*.18);g.lineTo(sxx+sz,syy);g.lineTo(sxx+sz*.18,syy+sz*.18);g.lineTo(sxx,syy+sz);g.lineTo(sxx-sz*.18,syy+sz*.18);g.lineTo(sxx-sz,syy);g.lineTo(sxx-sz*.18,syy-sz*.18);g.closePath();g.fill();
     g.beginPath();g.arc(sxx,syy,1.2+near*1.2,0,7);g.fill()});
@@ -332,129 +329,253 @@ addEventListener('resize',fit);fit();
 function toCanvas(e){const r=cv.getBoundingClientRect();return [(e.clientX-r.left)/r.width*CW,(e.clientY-r.top)/r.height*CH_]}
 cv.addEventListener('pointermove',e=>{const [x,y]=toCanvas(e);TX=x;TY=y});
 cv.addEventListener('pointerdown',e=>{const [x,y]=toCanvas(e);TX=x;TY=y;if(e.pointerType!=='mouse'){LX=LX*.3+x*.7;LY=LY*.3+y*.7}});
-cv.addEventListener('click',e=>{if(!$('#modal').hidden)return;const [x,y]=toCanvas(e);const ix=x/K,iy=y/K;const v=VIEWS[S.view];
-  const P=45;let sp=v.spots.find(s=>ix>=s.x&&ix<=s.x+s.w&&iy>=s.y&&iy<=s.y+s.h);
-  if(!sp)sp=v.spots.filter(s=>ix>=s.x-P&&ix<=s.x+s.w+P&&iy>=s.y-P&&iy<=s.y+s.h+P).sort((a,b)=>Math.hypot(a.x+a.w/2-ix,a.y+a.h/2-iy)-Math.hypot(b.x+b.w/2-ix,b.y+b.h/2-iy))[0];if(!sp){if(S.sel){toast('Tu tego nie użyjesz.')}return}AU.init();interact(sp)});
+cv.addEventListener('click',e=>{if(!$('#modal').hidden||scareRun)return;const [x,y]=toCanvas(e);const ix=x/K,iy=y/K;const vw=VIEWS[S.view];const act=vw.spots.filter(s=>!(s.need&&!s.need()));
+  const P=45;let sp=act.find(s=>ix>=s.x&&ix<=s.x+s.w&&iy>=s.y&&iy<=s.y+s.h);
+  if(!sp)sp=act.filter(s=>ix>=s.x-P&&ix<=s.x+s.w+P&&iy>=s.y-P&&iy<=s.y+s.h+P).sort((a,b)=>Math.hypot(a.x+a.w/2-ix,a.y+a.h/2-iy)-Math.hypot(b.x+b.w/2-ix,b.y+b.h/2-iy))[0];
+  if(!sp){if(S.sel)toast('Tu tego nie użyjesz.');return}AU.init();const h=HANDLERS[sp.id];if(h)h(sp)});
 
 /* ================= UI ================= */
 const modal=$('#modal'),paper=$('#paper');
 function openPaper(){modal.hidden=false;paper.innerHTML='';paper.scrollTop=0;return paper}
 function closePaper(){modal.hidden=true;AU.heart(false);AU.radio(false);clearInterval(tIv);timedRun=false;try{speechSynthesis.cancel()}catch(e){}}
 modal.addEventListener('click',e=>{if(e.target===modal&&!timedRun)closePaper()});
-let toastT;function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),3800)}
+let toastT;function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),4200)}
 function closeRow(p,label){const r=el('div','row');const c=btn(label||'Zamknij','sec');c.onclick=closePaper;r.append(c);p.append(r);return r}
-function wrong(p){if(p){p.classList.remove('shake');void p.offsetWidth;p.classList.add('shake')}const before=scareRun;maybeScare();if(!scareRun||before)AU.sting()}
+function wrong(p){if(p){p.classList.remove('shake');void p.offsetWidth;p.classList.add('shake')}maybeScare();if(!scareRun)AU.sting()}
 function drawInv(){const inv=$('#inv');inv.innerHTML='';S.inv.forEach(it=>{const d=ITEMS[it];const b=el('button','slot'+(S.sel===it?' sel':''));b.type='button';b.innerHTML=d.i+'<small>'+d.n.split(' ')[0]+'</small>';
   b.onclick=()=>{AU.init();if(S.sel===it){inspect(it)}else{S.sel=it;save();drawInv();toast('Wybrano: '+d.n+'. Stuknij miejsce, by użyć. Stuknij jeszcze raz, by obejrzeć.')}};inv.append(b)})}
-function setView(v){S.view=v;save();const V=VIEWS[v];$('#ttl').innerHTML='Pawilon C · <b>'+V.name+'</b>';$('#bNav').textContent=V.nextName;AU.setHum(v==='kartoteka'&&S.fuse);
-  if(v==='kartoteka'&&!S.seen.kart){S.seen.kart=1;save();setTimeout(()=>AU.steps(),1200)}}
-$('#bNav').onclick=()=>{AU.init();AU.creak();setView(VIEWS[S.view].next)};
-ITEMS.teczka.n='Teczka pacjenta';
+function setView(v){S.view=v;save();const C=CHAPTERS[S.ch];$('#ttl').innerHTML='Pawilon C · '+['','I','II','III','IV','V'][S.ch]+' · <b>'+VIEWS[v].name+'</b>';const other=C.views.find(x=>x!==v);$('#bNav').textContent=VIEWS[other].name+' ▶';
+  AU.setHum((v==='kartoteka'&&S.flags.fuse)||(v==='korytarz'&&S.flags.power));AU.motor(v==='maszynownia'&&S.flags.power);AU.hiss(v==='maszynownia'&&!S.done.c4_zawor&&S.ch===4)}
+$('#bNav').onclick=()=>{AU.init();AU.creak();const C=CHAPTERS[S.ch];setView(C.views.find(x=>x!==S.view));if(!S.seen['v_'+S.view]){S.seen['v_'+S.view]=1;save();setTimeout(()=>AU.steps(),900)}};
 
-/* ================= INTERAKCJE (zagadki pokoju 1) ================= */
-function eqText(x){const a=R(2,5),c=a+R(1,3),b=R(3,20),d=a*x+b-c*x;return a+'x + '+b+' = '+c+'x '+(d<0?'− '+(-d):'+ '+d)}
-function interact(sp){const id=sp.id,sel=S.sel;
- if(id==='przescieradlo'){if(S.done.przescieradlo)return toast('Pusto. Tylko kurz i pleśń.');const p=openPaper();AU.creak();
-   p.append(el('h2',null,'Pod prześcieradłem'),el('p',null,'Ktoś schował tu kartę przyjęcia. Rogi są nadpalone. Numer teczki zamazano, ale ktoś dopisał ołówkiem równanie.'),H_('div','paper-card','<div class="stamp">PAWILON C</div><p>Pacjent: <b>WOLAŃSKI ALEKSANDER</b><br>Zawód: matematyk<br>Przyjęty: 03.11.1974<br>Nr teczki: ███</p>'),H_('div','hand','„Numer teczki to x, jeśli '+eqText(S.eq.x)+'”'));
-   addNote('Karta przyjęcia Wolańskiego: numer teczki = x z równania na karcie.');S.done.przescieradlo=1;S.eqShown=1;save();
-   const r=el('div','row');const c=btn('Zapamiętaj i zamknij');c.onclick=closePaper;r.append(c);p.append(r);return}
- if(id==='lada'){if(!S.done.przescieradlo)return toast('Tysiące teczek. Bez numeru nie znajdziesz właściwej.');if(S.done.lada)return toast('Reszta teczek jest pusta albo zbutwiała.');
-   numPuzzle({title:'Kartoteka',intro:'Teczki są ponumerowane. Której szukasz? Rozwiąż równanie z karty przyjęcia.',q:()=>{const t=eqText(S.eq.x);return {q:t,a:S.eq.x}},ask:'Numer teczki (x):',
-     hint:'Przenieś wyrazy z x na jedną stronę, liczby na drugą. Pamiętaj o zmianie znaku.',regen:()=>{S.eq.x=R(12,29);save()},
-     ok:()=>{S.done.lada=1;save();give('teczka');addNote('Teczka nr '+S.eq.x+' – w środku wykres przyjęć pacjentów.');const p=openPaper();p.append(el('h2',null,'Teczka nr '+S.eq.x),el('p',null,'Teczka pachnie stęchlizną. W środku jeden wykres i dopisek drżącą ręką.'));showChart(p);closeRow(p)}});return}
- if(id==='szuflada'){if(S.done.szuflada)return toast('Szuflada jest pusta.');lockPuzzle({title:'Szuflada biurka',text:'Szuflada zamknięta na kłódkę z trzema kółkami. Na mosiądzu ktoś wydrapał: „ŚREDNIO”.',digits:3,code:String(S.mean).padStart(3,'0'),
-   ok:()=>{S.done.szuflada=1;save();give('bezpiecznik');give('notatka');addNote('Notatka profesora: „Drzwi otworzy kod z ostatnich cyfr czterech liczb – od najmniejszej do największej: TECZKA, WIESZAK, RADIO, OKNO.”');
-     const p=openPaper();p.append(el('h2',null,'Szuflada'),el('p',null,'W środku: stary bezpiecznik porcelanowy i złożona kartka.'),H_('div','hand','„Drzwi otworzy kod z ostatnich cyfr czterech liczb.<br>Ułóż je od najmniejszej liczby do największej.<br>TECZKA · WIESZAK · RADIO · OKNO<br>— A.W.”'));closeRow(p)}});return}
- if(id==='skrzynka'){if(S.fuse)return toast('Bezpiecznik siedzi na miejscu. Jarzeniówki brzęczą.');if(sel!=='bezpiecznik')return toast('Skrzynka bezpieczników. Jednego brakuje.');
-   take('bezpiecznik');S.fuse=1;save();AU.bang();setTimeout(()=>AU.setHum(true),200);toast('Klik. Jarzeniówki mrugają i zapalają się…');setTimeout(()=>{if(S.scare>0)jump('figure')},1600);return}
- if(id==='sciana'){if(!S.fuse)return toast('Ściana. Zbyt ciemno, żeby coś zobaczyć.');if(S.done.sciana)return toast('Na ścianie: trójkąt i liczba '+S.tri[2]+'. Wieszak…');
-   numPuzzle({title:'Rysunek na ścianie',intro:'W świetle jarzeniówek widać narysowany kredą trójkąt prostokątny. Przyprostokątne: '+S.tri[0]+' i '+S.tri[1]+'. Obok napis: „wieszak = ?”',q:()=>({q:'Ile wynosi przeciwprostokątna?',a:S.tri[2]}),ask:'Przeciwprostokątna:',
-     hint:'Twierdzenie Pitagorasa: a² + b² = c².',regen:null,ok:()=>{S.done.sciana=1;save();addNote('Ściana w kartotece: przeciwprostokątna = '+S.tri[2]+' („wieszak”).');toast('Kreda zaczyna się rozmazywać sama… zostaje liczba '+S.tri[2]+'.')}});return}
- if(id==='wieszak'){if(S.done.wieszak)return toast('Na haczyku nr '+S.tri[2]+' wisiał klucz. Już go masz.');const p=openPaper();p.append(el('h2',null,'Tablica z kluczami'),el('p',null,'20 haczyków, na większości wiszą zardzewiałe klucze bez opisów. Który zdjąć?'));
-   const hk=el('div','hooks');for(let i=1;i<=20;i++){const b=el('button','hook',String(i));b.type='button';b.onclick=()=>{if(i===S.tri[2]){S.done.wieszak=1;save();give('klucz');closePaper();AU.good();toast('Klucz nr '+i+'. Pasuje do czegoś małego.');addNote('Wieszak: klucz z haczyka nr '+i+'.')}else{b.disabled=true;b.style.opacity=.35;wrong(p);toast('Ten klucz kruszy się w palcach.')}};hk.append(b)}
-   p.append(hk);closeRow(p);return}
- if(id==='szafka'){if(S.done.szafka)return toast('Szafka jest pusta.');if(sel!=='klucz')return toast('Mała szafka. Zamknięta na klucz.');take('klucz');S.done.szafka=1;save();give('radio');AU.creak();toast('Klucz obraca się z trudem. W środku stare radio.');return}
- if(id==='okno'){if(S.done.okno)return toast('Na szybie widać napisaną palcem liczbę '+S.win+'.');timedTrial();return}
- if(id==='tabliczka'){const p=openPaper();p.append(el('h2',null,'Tabliczka'),H_('p',null,'Wyblakły druk: <b>„PRZYJĘCIA PACJENTÓW – KARTOTEKA OBOK”</b>.'),H_('div','hand','Pod spodem dopisane długopisem: „On wciąż liczy. Słychać go w radiu.”'));closeRow(p);return}
- if(id==='krzeslo'){AU.creak();toast(pick(['Krzesło jest ciepłe, jakby ktoś przed chwilą wstał.','Na oparciu wydrapano: 1974.','Pod krzesłem leży ołówek. Jeszcze ostry.']));return}
- if(id==='fotel'){AU.whisper();toast(pick(['W fotelu jest wgłębienie, jakby ktoś w nim siedział.','Ktoś szepcze z korytarza…']));return}
- if(id==='drzwi2'){toast('Wąskie drzwi są zamurowane od drugiej strony.');return}
- if(id==='okna'){toast(pick(['Za oknem las. Między drzewami coś stoi.','Szyby powybijane. Wiatr przynosi zapach ziemi.']));return}
- if(id==='drzwi'){exitDoor();return}
-}
-function inspect(it){if(it==='teczka'){const p=openPaper();p.append(el('h2',null,'Teczka nr '+S.eq.x));showChart(p);closeRow(p);return}
- if(it==='notatka'){const p=openPaper();p.append(el('h2',null,'Notatka profesora'),H_('div','hand','„Drzwi otworzy kod z ostatnich cyfr czterech liczb.<br>Ułóż je od najmniejszej liczby do największej.<br>TECZKA · WIESZAK · RADIO · OKNO<br>— A.W.”'));closeRow(p);return}
- if(it==='radio'){radioPuzzle();return}
- toast(ITEMS[it].n+'. Stuknij miejsce w pokoju, żeby go użyć.')}
-function showChart(p){const v=S.chart,mx=Math.max(...v),yrs=[1974,1975,1976,1977,1978],W=520,Hh=260;let s='<svg viewBox="0 0 '+W+' '+(Hh+50)+'" width="100%" style="max-width:520px;background:rgba(255,255,255,.25)">';
-  for(let i=0;i<=5;i++){const y=Hh-i*Hh/5;s+='<line x1="50" y1="'+y+'" x2="'+(W-10)+'" y2="'+y+'" stroke="#00000033"/><text x="44" y="'+(y+5)+'" text-anchor="end" font-size="13" font-family="Special Elite">'+Math.round(i*300/5)+'</text>'}
-  v.forEach((n,i)=>{const bw=60,x=70+i*88,h=n/300*Hh;s+='<rect x="'+x+'" y="'+(Hh-h)+'" width="'+bw+'" height="'+h+'" fill="#3a3a36"/><text x="'+(x+bw/2)+'" y="'+(Hh-h-6)+'" text-anchor="middle" font-size="15" font-family="Special Elite">'+n+'</text><text x="'+(x+bw/2)+'" y="'+(Hh+20)+'" text-anchor="middle" font-size="13" font-family="Special Elite">'+yrs[i]+'</text>'});
-  s+='<text x="'+(W/2)+'" y="'+(Hh+44)+'" text-anchor="middle" font-size="13" font-family="Special Elite">Liczba przyjęć do Pawilonu C w latach 1974–1978</text></svg>';
-  p.append(H_('div',null,s),H_('div','hand','„Szuflada pamięta, ile ich było… ŚREDNIO.”'))}
-
-/* ---- zadanie liczbowe ---- */
+/* ---- generyczne zagadki ---- */
 function numPuzzle(o){let task=o.q(),fails=0;const p=openPaper();
- const draw=()=>{window._t=task;p.innerHTML='';p.append(el('h2',null,o.title),el('p',null,o.intro),H_('div','prob',task.q));const inp=el('input','ans');inp.type='text';inp.inputMode='decimal';inp.autocomplete='off';inp.id='ans-'+o.title.length;inp.placeholder='wynik';const fb=el('div','fb');
+ const draw=()=>{window._t=task;p.innerHTML='';p.append(el('h2',null,o.title),H_('p',null,o.intro),H_('div','prob',task.q));const inp=el('input','ans');inp.type='text';inp.inputMode='decimal';inp.autocomplete='off';inp.id='ans-x';inp.placeholder='wynik';const fb=el('div','fb');
   const r=el('div','row');const ok=btn('Sprawdź');const hb=btn('Podpowiedź','sec');const cb=btn('Wróć','sec');r.append(inp,ok,hb,cb);p.append(el('p','sub',o.ask),r,fb);let hs=false;hb.onclick=()=>{if(!hs){hs=true;p.append(H_('div','hint',o.hint))}};cb.onclick=closePaper;
   const check=()=>{const v=parseFloat(inp.value.replace(',','.').replace(/\s/g,''));if(isNaN(v)){fb.className='fb no';fb.textContent='Wpisz liczbę.';return}
    if(Math.abs(v-task.a)<1e-9){AU.good();closePaper();o.ok();return}fails++;wrong(p);
-   if(fails>=2&&o.regen){fb.className='fb no';fb.textContent='Litery rozmywają się i układają w nowe zadanie…';ok.disabled=true;setTimeout(()=>{o.regen();task=o.q();fails=0;draw()},1800)}else{fb.className='fb no';fb.textContent=pick(['Coś za tobą westchnęło.','Źle. Ktoś się śmieje w korytarzu.','Nie. Światło latarki drży.'])}};
+   if(fails>=2&&o.regen){fb.className='fb no';fb.textContent='Litery rozmywają się i układają w nowe zadanie…';ok.disabled=true;setTimeout(()=>{o.regen();task=o.q();fails=0;draw()},1800)}else{fb.className='fb no';fb.textContent=pick(['Coś za tobą westchnęło.','Źle. Ktoś się śmieje w korytarzu.','Nie. Światło latarki drży.','Źle. Coś przesuwa się w ciemności.'])}};
   ok.onclick=check;inp.addEventListener('keydown',e=>{if(e.key==='Enter')check()});setTimeout(()=>{try{inp.focus({preventScroll:true})}catch(e){}},80)};draw()}
-
-/* ---- kłódka ---- */
-function lockPuzzle(o){const p=openPaper();p.append(el('h2',null,o.title),el('p',null,o.text));const vals=Array(o.digits).fill(0);const lock=el('div','lock');
+function lockPuzzle(o){const p=openPaper();p.append(el('h2',null,o.title),H_('p',null,o.text));const vals=Array(o.digits).fill(0);const lock=el('div','lock');
  vals.forEach((_,i)=>{const w=el('div','wheel');const up=el('button',null,'▲');up.type='button';const d=el('div','d','0');const dn=el('button',null,'▼');dn.type='button';up.onclick=()=>{vals[i]=(vals[i]+1)%10;d.textContent=vals[i];AU.drip()};dn.onclick=()=>{vals[i]=(vals[i]+9)%10;d.textContent=vals[i];AU.drip()};w.append(up,d,dn);lock.append(w)});
  p.append(lock);const fb=el('div','fb');const r=el('div','row');const o2=btn('Otwórz','red');const c=btn('Wróć','sec');c.onclick=closePaper;r.append(o2,c);p.append(r,fb);
- o2.onclick=()=>{if(vals.join('')===o.code){AU.good();closePaper();o.ok()}else{fb.className='fb no';fb.textContent='Kłódka ani drgnie.';wrong(p)}}}
-
-/* ---- radio ---- */
-function radioPuzzle(){if(S.done.radio){const p=openPaper();p.append(el('h2',null,'Radio'),el('p',null,'Szum. Czasem przebija się szept: „'+S.seq.n+'”.'));closeRow(p);return}
- AU.radio(true);const sq=S.seq;const said=sq.s.join(', ');const spoken=speak(sq.s.join('… ')+'… i co dalej?');
- numPuzzle({title:'Radio',intro:'Kręcisz gałką. Przez szum przebija się monotonny męski głos czytający liczby'+(spoken?'':' (napisy)')+': „'+said+', …”. Potem cisza – jakby czekał na odpowiedź.',q:()=>({q:said+', ?',a:sq.n}),ask:'Jaka liczba powinna paść następna?',hint:sq.h,regen:null,
-  ok:()=>{AU.radio(false);S.done.radio=1;save();addNote('Radio: głos podał liczbę '+sq.n+'.');speak('Dobrze… '+sq.n+'.');toast('Głos w radiu powtarza: „'+sq.n+'”. Potem krzyk i cisza.');setTimeout(()=>{if(S.scare>0)AU.scream(.6)},2200)}})}
-
-/* ---- próba na czas ---- */
+ o2.onclick=()=>{if(o.pre&&!o.pre()){fb.className='fb no';fb.textContent=o.preMsg;return}if(vals.join('')===o.code){AU.good();closePaper();o.ok()}else{fb.className='fb no';fb.textContent='Ani drgnie.';wrong(p)}}}
+function gridPick(o){const p=openPaper();p.append(el('h2',null,o.title),H_('p',null,o.text));const hk=el('div','hooks');hk.style.setProperty('--cols',o.cols||5);
+ for(let i=1;i<=o.n;i++){const b=el('button','hook',o.label?o.label(i):String(i));b.type='button';b.onclick=()=>{if(i===o.correct){closePaper();AU.good();o.ok(i)}else{b.disabled=true;b.style.opacity=.35;wrong(p);if(o.bad)toast(o.bad)}};hk.append(b)}
+ p.append(hk);closeRow(p)}
 const TQ=[
-['Romb to czworokąt, który ma:',['wszystkie boki równej długości','wszystkie kąty proste','tylko jedną parę boków równoległych','przekątne zawsze równej długości']],
-['W rombie kąty przeciwległe są:',['równe','zawsze proste','zawsze różne','razem równe 90°']],
-['Przekątne rombu przecinają się pod kątem:',['90°','60°','45°','zależy od rombu']],
-['Trapez ma:',['co najmniej jedną parę boków równoległych','wszystkie boki równe','cztery kąty proste','prostopadłe przekątne']],
-['Kwadrat jest jednocześnie:',['prostokątem i rombem','tylko prostokątem','tylko rombem','trapezem bez kątów prostych']],
-['Suma kątów w czworokącie wynosi:',['360°','180°','540°','90°']],
-['Kąty wierzchołkowe są:',['równe','razem równe 180°','razem równe 90°','zawsze proste']],
-['Kąty przyległe sumują się do:',['180°','90°','360°','są zawsze równe']],
-['Pole trapezu:',['(a + b) · h / 2','a · b · h','a · h / 2','2(a + b)']],
-['Pole rombu z przekątnych e i f:',['e · f / 2','e · f','e + f','(e + f) / 2']],
-['Obwód koła o promieniu r:',['2πr','πr²','πr','4r']],
-['Przekątna kwadratu o boku a:',['a√2','2a','a√3','a²']],
-['W równoległoboku kąty przy jednym boku sumują się do:',['180°','90°','360°','120°']],
-['Ile osi symetrii ma prostokąt, który nie jest kwadratem?',['2','4','1','0']],
-['Kąt wewnętrzny sześciokąta foremnego:',['120°','108°','135°','60°']],
-['Przekątne prostokąta:',['są równe i dzielą się na połowy','są zawsze prostopadłe','mają różne długości','nie przecinają się']],
-['Trójkąt prostokątny ma kąt 35°. Drugi kąt ostry ma:',['55°','65°','45°','145°']],
-['Objętość ostrosłupa:',['Pp · H / 3','Pp · H','Pp · H / 2','3 · Pp · H']]
+['fig','Romb to czworokąt, który ma:',['wszystkie boki równej długości','wszystkie kąty proste','tylko jedną parę boków równoległych','przekątne zawsze równej długości']],
+['fig','W rombie kąty przeciwległe są:',['równe','zawsze proste','zawsze różne','razem równe 90°']],
+['fig','Przekątne rombu przecinają się pod kątem:',['90°','60°','45°','zależy od rombu']],
+['fig','Trapez ma:',['co najmniej jedną parę boków równoległych','wszystkie boki równe','cztery kąty proste','prostopadłe przekątne']],
+['fig','Kwadrat jest jednocześnie:',['prostokątem i rombem','tylko prostokątem','tylko rombem','trapezem bez kątów prostych']],
+['fig','Przekątne prostokąta:',['są równe i dzielą się na połowy','są zawsze prostopadłe','mają różne długości','nie przecinają się']],
+['fig','Ile osi symetrii ma prostokąt, który nie jest kwadratem?',['2','4','1','0']],
+['fig','Deltoid ma:',['dwie pary równych boków sąsiednich','wszystkie boki równe','dwie pary boków równoległych','wszystkie kąty równe']],
+['fig','Trapez równoramienny ma:',['równe ramiona i równe kąty przy tej samej podstawie','wszystkie boki równe','cztery kąty proste','równoległe ramiona']],
+['kat','Suma kątów w czworokącie wynosi:',['360°','180°','540°','90°']],
+['kat','Suma kątów w trójkącie wynosi:',['180°','360°','90°','270°']],
+['kat','Kąty wierzchołkowe są:',['równe','razem równe 180°','razem równe 90°','zawsze proste']],
+['kat','Kąty przyległe sumują się do:',['180°','90°','360°','są zawsze równe']],
+['kat','W równoległoboku kąty przy jednym boku sumują się do:',['180°','90°','360°','120°']],
+['kat','Kąt wewnętrzny sześciokąta foremnego:',['120°','108°','135°','60°']],
+['kat','Trójkąt prostokątny ma kąt 35°. Drugi kąt ostry ma:',['55°','65°','45°','145°']],
+['kat','Każdy kąt trójkąta równobocznego ma:',['60°','90°','45°','30°']],
+['kat','W rombie jeden kąt ma 70°. Kąt sąsiedni ma:',['110°','70°','90°','140°']],
+['wzor','Pole trapezu:',['(a + b) · h / 2','a · b · h','a · h / 2','2(a + b)']],
+['wzor','Pole rombu z przekątnych e i f:',['e · f / 2','e · f','e + f','(e + f) / 2']],
+['wzor','Obwód koła o promieniu r:',['2πr','πr²','πr','4r']],
+['wzor','Pole koła o promieniu r:',['πr²','2πr','πr','r²']],
+['wzor','Przekątna kwadratu o boku a:',['a√2','2a','a√3','a²']],
+['wzor','Objętość ostrosłupa:',['Pp · H / 3','Pp · H','Pp · H / 2','3 · Pp · H']],
+['wzor','Pole powierzchni sześcianu o krawędzi a:',['6a²','a³','4a²','12a']],
+['wzor','Wysokość trójkąta równobocznego o boku a:',['a√3 / 2','a√2','a / 2','a√3']],
+['pot','aᵐ · aⁿ =',['aᵐ⁺ⁿ','aᵐ·ⁿ','aᵐ⁻ⁿ','2aᵐⁿ']],
+['pot','(aᵐ)ⁿ =',['aᵐ·ⁿ','aᵐ⁺ⁿ','aⁿ⁻ᵐ','aᵐ']],
+['pot','a⁰ (dla a ≠ 0) wynosi:',['1','0','a','nie istnieje']],
+['pot','10⁻² to:',['0,01','−100','0,1','−20']],
+['pot','√(a · b) dla a, b ≥ 0 to:',['√a · √b','√a + √b','a · √b','(a · b)²']],
+['stat','Mediana liczb 2, 3, 7, 8, 10 to:',['7','6','3','8']],
+['stat','Dominanta (moda) liczb 4, 7, 7, 2, 9 to:',['7','4','5,8','9']],
+['stat','Cena wzrosła o 10%, potem spadła o 10%. Końcowa cena jest:',['mniejsza niż na początku','taka sama','większa','nie da się określić']],
+['stat','Prawdopodobieństwo wyrzucenia szóstki kostką:',['1/6','1/2','1/3','6']],
+['stat','Średnia arytmetyczna 4, 6, 8, 10 to:',['7','6','8','28']]
 ];
 let tIv=null,timedRun=false,usedQ=new Set();
-function timedTrial(){const p=openPaper();const N=5,T=60,NEED=4;
- const intro=again=>{p.innerHTML='';p.append(el('h2',null,'Okno'),el('p',null,again?'Postać za oknem zniknęła… i znów stoi. Dalej patrzy. Pytania są inne.':'Za szybą, w ciemności, stoi ktoś w szpitalnej koszuli. Nie rusza się. Na szybie pojawia się napis: „ODPOWIEDZ, ZANIM ZGAŚNIE LATARKA”.'),H_('p',null,'<b>'+N+' pytań, '+T+' sekund, potrzeba '+NEED+' dobrych.</b>'));
-  const r=el('div','row');const s=btn('Zaczynam','red');s.onclick=run;r.append(s);const c=btn('Odsuń się od okna','sec');c.onclick=closePaper;r.append(c);p.append(r)};
- const run=()=>{let pool=TQ.filter(q=>!usedQ.has(q[0]));if(pool.length<N){usedQ=new Set();pool=TQ.slice()}const qs=shuffle(pool).slice(0,N);qs.forEach(q=>usedQ.add(q[0]));let i=0,good=0,left=T;timedRun=true;
-  p.innerHTML='';p.append(el('h2',null,'Okno'));const info=el('p','sub');const tm=el('div','timer'),bar=el('i');tm.append(bar);const area=el('div');p.append(info,tm,area);AU.heart(true,900);
-  clearInterval(tIv);tIv=setInterval(()=>{left-=.25;bar.style.width=Math.max(0,left/T*100)+'%';if(left<T*.3)AU.heart(true,500);if(left<=0)fin(false)},250);
-  const show=()=>{info.textContent='Pytanie '+(i+1)+' z '+N+' · dobrze: '+good;const q=qs[i];area.innerHTML='';area.append(H_('div','prob',q[0]));const o=el('div','opts');
-   shuffle(q[1].map((t,j)=>({t,ok:j===0}))).forEach(a=>{const b=el('button','opt',a.t);b.type='button';b.onclick=()=>{[...o.children].forEach(x=>x.disabled=true);if(a.ok){good++;b.classList.add('good');AU.bell()}else{b.classList.add('bad');[...o.children].find(x=>x.textContent===q[1][0]).classList.add('good');maybeScare();if(!scareRun)AU.sting()}
-    i++;setTimeout(()=>{if(good>=NEED)return fin(true);if(i>=N||good+(N-i)<NEED)return fin(false);show()},a.ok?800:1900)};o.append(b)});area.append(o)};
-  const fin=win=>{if(!timedRun)return;timedRun=false;clearInterval(tIv);AU.heart(false);if(win){S.done.okno=1;save();addNote('Okno: postać napisała palcem na szybie liczbę '+S.win+'.');closePaper();AU.good();toast('Postać znika. Na zaparowanej szybie zostaje liczba '+S.win+'.');return}if(S.scare>0)jump('face');setTimeout(()=>intro(true),900)};show()};
+function timedTrial(o){const p=openPaper();
+ const intro=again=>{p.innerHTML='';p.append(el('h2',null,o.title),H_('p',null,again?o.again:o.intro),H_('p',null,'<b>'+o.N+' pytań, '+o.T+' sekund, potrzeba '+o.NEED+' dobrych.</b>'));const r=el('div','row');const s=btn('Zaczynam','red');s.onclick=run;r.append(s);const c=btn('Jeszcze nie','sec');c.onclick=closePaper;r.append(c);p.append(r)};
+ const run=()=>{let pool=TQ.filter(q=>o.cats.includes(q[0])&&!usedQ.has(q[1]));if(pool.length<o.N){usedQ=new Set();pool=TQ.filter(q=>o.cats.includes(q[0]))}const qs=shuffle(pool).slice(0,o.N);qs.forEach(q=>usedQ.add(q[1]));let i=0,good=0,left=o.T;timedRun=true;
+  p.innerHTML='';p.append(el('h2',null,o.title));const info=el('p','sub');const tm=el('div','timer'),bar=el('i');tm.append(bar);const area=el('div');p.append(info,tm,area);AU.heart(true,900);
+  clearInterval(tIv);tIv=setInterval(()=>{left-=.25;bar.style.width=Math.max(0,left/o.T*100)+'%';if(left<o.T*.3)AU.heart(true,500);if(left<=0)fin(false)},250);
+  const show=()=>{info.textContent='Pytanie '+(i+1)+' z '+o.N+' · dobrze: '+good;const q=qs[i];area.innerHTML='';area.append(H_('div','prob',q[1]));const op=el('div','opts');
+   shuffle(q[2].map((t,j)=>({t,ok:j===0}))).forEach(a=>{const b=el('button','opt',a.t);b.type='button';b.onclick=()=>{[...op.children].forEach(x=>x.disabled=true);if(a.ok){good++;b.classList.add('good');AU.bell()}else{b.classList.add('bad');[...op.children].find(x=>x.textContent===q[2][0]).classList.add('good');maybeScare();if(!scareRun)AU.sting()}
+    i++;setTimeout(()=>{if(good>=o.NEED)return fin(true);if(i>=o.N||good+(o.N-i)<o.NEED)return fin(false);show()},a.ok?800:1900)};op.append(b)});area.append(op)};
+  const fin=win=>{if(!timedRun)return;timedRun=false;clearInterval(tIv);AU.heart(false);if(win){closePaper();AU.good();o.win();return}jump('face');setTimeout(()=>intro(true),900)};show()};
  intro(false)}
+function showNote(title,html){const p=openPaper();p.append(el('h2',null,title),H_('div','hand',html));closeRow(p)}
 
-/* ---- drzwi wyjściowe ---- */
-function exitDoor(){const vals=[['TECZKA',S.eq.x],['WIESZAK',S.tri[2]],['RADIO',S.seq.n],['OKNO',S.win]].sort((a,b)=>a[1]-b[1]);const code=vals.map(v=>v[1]%10).join('');
- lockPuzzle({title:'Drzwi na korytarz',text:'Ciężkie drzwi obite blachą. Zamek szyfrowy z czterema kółkami. Ktoś wydrapał obok: „A.W. – ostatnie cyfry, od najmniejszej”.',digits:4,code,
-  ok:()=>{AU.bang();S.done.drzwi=1;save();story('Koniec rozdziału I','Korytarz',['Zamek puszcza z suchym trzaskiem. Za drzwiami ciągnie się długi, ciemny korytarz.','Na końcu, w smudze księżyca, stoi wózek inwalidzki. Jego koło wciąż się obraca.','Z głośnika pod sufitem cichy głos liczy: „jeden… dwa… trzy…”','— To jest wersja próbna pierwszego pokoju. Daj znać, czy kierunek jest dobry. —'],()=>{})}})}
+/* ================= HANDLERY: ROZDZIAŁ I ================= */
+function eqText(x){const a=R(2,5),c=a+R(1,3),b=R(3,20),d=a*x+b-c*x;return a+'x + '+b+' = '+c+'x '+(d<0?'− '+(-d):'+ '+d)}
+function showChart(p){const v=V().chart,yrs=[1974,1975,1976,1977,1978],W=520,Hh=260;let s='<svg viewBox="0 0 '+W+' '+(Hh+50)+'" width="100%" style="max-width:520px;background:rgba(255,255,255,.25)">';
+  for(let i=0;i<=5;i++){const y=Hh-i*Hh/5;s+='<line x1="50" y1="'+y+'" x2="'+(W-10)+'" y2="'+y+'" stroke="#00000033"/><text x="44" y="'+(y+5)+'" text-anchor="end" font-size="13" font-family="Special Elite">'+Math.round(i*300/5)+'</text>'}
+  v.forEach((n,i)=>{const bw=60,x=70+i*88,h=n/300*Hh;s+='<rect x="'+x+'" y="'+(Hh-h)+'" width="'+bw+'" height="'+h+'" fill="#3a3a36"/><text x="'+(x+bw/2)+'" y="'+(Hh-h-6)+'" text-anchor="middle" font-size="15" font-family="Special Elite">'+n+'</text><text x="'+(x+bw/2)+'" y="'+(Hh+20)+'" text-anchor="middle" font-size="13" font-family="Special Elite">'+yrs[i]+'</text>'});
+  s+='<text x="'+(W/2)+'" y="'+(Hh+44)+'" text-anchor="middle" font-size="13" font-family="Special Elite">Liczba przyjęć do Pawilonu C w latach 1974–1978</text></svg>';p.append(H_('div',null,s),H_('div','hand','„Szuflada pamięta, ile ich było… ŚREDNIO.”'))}
+function nightsChart(p){const v=V().nights,days=['pn','wt','śr','cz','pt','sb','nd'],W=520,Hh=240;let s='<svg viewBox="0 0 '+W+' '+(Hh+50)+'" width="100%" style="max-width:520px;background:rgba(255,255,255,.25)">';
+  for(let i=0;i<=4;i++){const y=Hh-i*Hh/4;s+='<line x1="40" y1="'+y+'" x2="'+(W-10)+'" y2="'+y+'" stroke="#00000033"/><text x="34" y="'+(y+5)+'" text-anchor="end" font-size="13" font-family="Special Elite">'+(i*3)+'</text>'}
+  v.forEach((n,i)=>{const x=60+i*64,h=n/12*Hh;s+='<rect x="'+x+'" y="'+(Hh-h)+'" width="40" height="'+h+'" fill="#3a3a36"/><text x="'+(x+20)+'" y="'+(Hh-h-6)+'" text-anchor="middle" font-size="15" font-family="Special Elite">'+n+'</text><text x="'+(x+20)+'" y="'+(Hh+20)+'" text-anchor="middle" font-size="13" font-family="Special Elite">'+days[i]+'</text>'});
+  s+='<text x="'+(W/2)+'" y="'+(Hh+44)+'" text-anchor="middle" font-size="13" font-family="Special Elite">O której godzinie pacjent budził się z krzykiem (tydzień 41/1978)</text></svg>';p.append(H_('div',null,s),H_('div','hand','„Zegar w izolatce stanął na godzinie, która powtarzała się NAJCZĘŚCIEJ.”'))}
+const NOTE1='„Drzwi otworzy kod z ostatnich cyfr czterech liczb.<br>Ułóż je od najmniejszej liczby do największej.<br>TECZKA · WIESZAK · RADIO · OKNO<br>— A.W.”';
+const NOTE2='„Kod izolatki:<br>dwie pierwsze cyfry – numer łóżka razy godzina zegara (tylko dwie ostatnie cyfry wyniku),<br>dwie ostatnie – liczba z pozytywki plus liczba z łóżka na kółkach (też dwie ostatnie cyfry).<br>— A.W.”';
+const NOTE3='„Pomnóż numer bębna przez kąt z rentgena. Zapisz jako liczbę czterocyfrową – jeśli trzeba, z zerami na początku. Wpisz ją OD KOŃCA.”';
+const NOTE4='„Wyjście: kwadrat numeru przełącznika + numer drzwi z klucza + procent spadku ciśnienia. Wynik jako cztery cyfry.”';
+const NOTE5='„Ostatnie drzwi: rok z kolumny minus prawdziwy wzrost człowieka z modelu. Cztery cyfry. Ale najpierw odpowiedz mi na moje ostatnie pytania. — A.W.”';
+const HANDLERS={
+ przescieradlo(){if(S.done.przescieradlo)return toast('Pusto. Tylko kurz i pleśń.');const v=V(),p=openPaper();AU.creak();
+   p.append(el('h2',null,'Pod prześcieradłem'),el('p',null,'Ktoś schował tu kartę przyjęcia. Rogi są nadpalone. Numer teczki zamazano, ale ktoś dopisał ołówkiem równanie.'),H_('div',null,'<div class="stamp">PAWILON C</div><p>Pacjent: <b>WOLAŃSKI ALEKSANDER</b><br>Zawód: matematyk<br>Przyjęty: 03.11.1974<br>Nr teczki: ███</p>'),H_('div','hand','„Numer teczki to x, jeśli '+eqText(v.eqx)+'”'));
+   addNote('Karta przyjęcia Wolańskiego: numer teczki = x z równania na karcie.');S.done.przescieradlo=1;save();closeRow(p,'Zapamiętaj i zamknij')},
+ lada(){if(!S.done.przescieradlo)return toast('Tysiące teczek. Bez numeru nie znajdziesz właściwej.');if(S.done.lada)return toast('Reszta teczek jest pusta albo zbutwiała.');const v=V();
+   numPuzzle({title:'Kartoteka',intro:'Teczki są ponumerowane. Której szukasz? Rozwiąż równanie z karty przyjęcia.',q:()=>({q:eqText(v.eqx),a:v.eqx}),ask:'Numer teczki (x):',hint:'Przenieś wyrazy z x na jedną stronę, liczby na drugą. Pamiętaj o zmianie znaku.',regen:()=>{v.eqx=R(12,29);save()},
+     ok:()=>{S.done.lada=1;save();give('teczka');addNote('Teczka nr '+v.eqx+' – w środku wykres przyjęć pacjentów.');const p=openPaper();p.append(el('h2',null,'Teczka nr '+v.eqx));showChart(p);closeRow(p)}})},
+ szuflada(){if(S.done.szuflada)return toast('Szuflada jest pusta.');lockPuzzle({title:'Szuflada biurka',text:'Szuflada zamknięta na kłódkę z trzema kółkami. Na mosiądzu ktoś wydrapał: „ŚREDNIO”.',digits:3,code:pad(V().mean,3),
+   ok:()=>{S.done.szuflada=1;save();give('bezpiecznik');give('notatka');addNote('Notatka (I): '+NOTE1.replace(/<br>/g,' '));showNote('Szuflada',NOTE1)}})},
+ skrzynka(){if(S.flags.fuse)return toast('Bezpiecznik siedzi na miejscu. Jarzeniówki brzęczą.');if(S.sel!=='bezpiecznik')return toast('Skrzynka bezpieczników. Jednego brakuje.');
+   take('bezpiecznik');S.flags.fuse=1;save();AU.bang();setTimeout(()=>AU.setHum(true),200);toast('Klik. Jarzeniówki mrugają i zapalają się…');setTimeout(()=>jump('figure'),1600)},
+ sciana(){if(S.done.sciana)return toast('Na ścianie: trójkąt i liczba '+V().tri[2]+'. Wieszak…');const t=V().tri;
+   numPuzzle({title:'Rysunek na ścianie',intro:'W świetle jarzeniówek widać narysowany kredą trójkąt prostokątny. Przyprostokątne: '+t[0]+' i '+t[1]+'. Obok napis: „wieszak = ?”',q:()=>({q:'Ile wynosi przeciwprostokątna?',a:t[2]}),ask:'Przeciwprostokątna:',hint:'Twierdzenie Pitagorasa: a² + b² = c².',
+     ok:()=>{S.done.sciana=1;save();addNote('Ściana w kartotece: przeciwprostokątna = '+t[2]+' („wieszak”).');toast('Kreda zaczyna się rozmazywać sama… zostaje liczba '+t[2]+'.')}})},
+ wieszak(){const v=V();if(S.done.wieszak)return toast('Na haczyku nr '+v.tri[2]+' wisiał klucz. Już go masz.');
+   gridPick({title:'Tablica z kluczami',text:'20 haczyków, na większości wiszą zardzewiałe klucze bez opisów. Który zdjąć?',n:20,correct:v.tri[2],bad:'Ten klucz kruszy się w palcach.',ok:i=>{S.done.wieszak=1;save();give('klucz');toast('Klucz nr '+i+'. Pasuje do czegoś małego.');addNote('Wieszak: klucz z haczyka nr '+i+'.')}})},
+ szafka(){if(S.done.szafka)return toast('Szafka jest pusta.');if(S.sel!=='klucz')return toast('Mała szafka. Zamknięta na klucz.');take('klucz');S.done.szafka=1;save();give('radio');AU.creak();toast('Klucz obraca się z trudem. W środku stare radio.')},
+ okno(){const v=V();if(S.done.okno)return toast('Na szybie widać napisaną palcem liczbę '+v.win+'.');
+   timedTrial({title:'Okno',intro:'Za szybą, w ciemności, stoi ktoś w szpitalnej koszuli. Nie rusza się. Na szybie pojawia się napis: „ODPOWIEDZ, ZANIM ZGAŚNIE LATARKA”.',again:'Postać za oknem zniknęła… i znów stoi. Pytania są inne.',N:5,T:60,NEED:4,cats:['fig','kat','wzor'],
+     win:()=>{S.done.okno=1;save();addNote('Okno: postać napisała palcem na szybie liczbę '+v.win+'.');toast('Postać znika. Na zaparowanej szybie zostaje liczba '+v.win+'.')}})},
+ tabliczka(){showNote('Tabliczka','Wyblakły druk: „PRZYJĘCIA PACJENTÓW – KARTOTEKA OBOK”.<br>Pod spodem długopisem: „On wciąż liczy. Słychać go w radiu.”')},
+ krzeslo(){AU.creak();toast(pick(['Krzesło jest ciepłe, jakby ktoś przed chwilą wstał.','Na oparciu wydrapano: 1974.','Pod krzesłem leży ołówek. Jeszcze ostry.']))},
+ fotel(){AU.whisper();toast(pick(['W fotelu jest wgłębienie, jakby ktoś w nim siedział.','Ktoś szepcze z korytarza…']))},
+ drzwi2(){toast('Wąskie drzwi są zamurowane od drugiej strony.')},
+ okna(){toast(pick(['Za oknem las. Między drzewami coś stoi.','Szyby powybijane. Wiatr przynosi zapach ziemi.']))},
+ drzwi(){const v=V();const vals=[v.eqx,v.tri[2],v.seq.n,v.win].sort((a,b)=>a-b);const code=vals.map(x=>x%10).join('');
+   lockPuzzle({title:'Drzwi na korytarz',text:'Ciężkie drzwi obite blachą. Zamek szyfrowy z czterema kółkami. Ktoś wydrapał obok: „A.W. – ostatnie cyfry, od najmniejszej”.',digits:4,code,ok:()=>nextChapter()})},
 
-/* ================= NOTATNIK, DŹWIĘK, START ================= */
+ /* ===== ROZDZIAŁ II ===== */
+ c2_ksiazka(){const v=V();const p=openPaper();AU.creak();p.append(el('h2',null,'Dziennik pielęgniarki'),H_('p',null,'Książka leżąca na siatce łóżka to dziennik dyżurów. Na ostatniej stronie, drżącym pismem:'),
+   H_('div','hand','„Pacjent A.W. – zapisano '+v.D+' mg leku nasennego. Podałam tylko '+v.p+'% dawki. Nie chciałam, żeby przestał liczyć.<br>Szafę w izolatce zamknęłam na tyle, ile miligramów naprawdę dostał.”'));
+   addNote('Dziennik pielęgniarki: zapisano '+v.D+' mg, podano '+v.p+'%. Szafa w izolatce = liczba podanych mg.');S.done.c2_ksiazka=1;save();closeRow(p)},
+ c2_szafa(){if(S.done.c2_szafa)return toast('Szafa jest pusta. Na dnie zadrapania – ktoś liczył dni.');const v=V();
+   lockPuzzle({title:'Szafa w izolatce',text:'Metalowa szafa z kłódką na trzy cyfry. Na drzwiach ktoś napisał markerem: „mg”.',digits:3,code:pad(v.mg,3),
+     ok:()=>{S.done.c2_szafa=1;save();give('uv');give('karta');AU.creak();addNote('Szafa: lampa UV i karta nocy (wykres).');const p=openPaper();p.append(el('h2',null,'Szafa'),el('p',null,'Drzwi skrzypią. W środku: lampa ultrafioletowa i karta z wykresem. Z tyłu szafy coś drapie… potem cisza.'));nightsChart(p);closeRow(p);setTimeout(()=>{if(Math.random()<.6)jump('figure')},2500)}})},
+ c2_zegar(){const v=V();if(S.done.c2_zegar)return toast('Zegar stoi na godzinie '+v.hour+'. Pod nim była skrytka.');
+   gridPick({title:'Zegar w izolatce',text:'Mały zegar ścienny. Wskazówki dają się przestawić. Na której godzinie go ustawić?',n:12,cols:6,correct:v.hour,bad:'Zegar wydaje głośne tyknięcie. Coś za tobą też tyknęło.',
+     ok:i=>{S.done.c2_zegar=1;save();give('srubokret');addNote('Zegar ustawiony na '+i+'. Za nim schowek ze śrubokrętem.');AU.bell(880);toast('Klik. Zegar odskakuje od ściany. Za nim schowek – śrubokręt.')}})},
+ c2_uv(){const v=V();if(S.done.c2_uv)return toast('Fioletowy napis: romb, przekątne '+v.rb[0]+' i '+v.rb[1]+'. Bok = łóżko.');if(S.sel!=='uv')return toast('Odrapana ściana.');
+   numPuzzle({title:'Napis w ultrafiolecie',intro:'W świetle lampy UV na ścianie pojawia się fioletowy napis: „ROMB: przekątne '+v.rb[0]+' i '+v.rb[1]+'. Jego bok = moje łóżko.”',q:()=>({q:'Ile wynosi bok rombu?',a:v.rb[2]}),ask:'Bok rombu:',hint:'Przekątne rombu przecinają się pod kątem prostym i dzielą na połowy. Powstaje trójkąt prostokątny o przyprostokątnych e/2 i f/2.',
+     ok:()=>{S.done.c2_uv=1;save();addNote('Napis UV: bok rombu = '+v.rb[2]+' = numer łóżka profesora.');toast('Napis gaśnie. Zostaje liczba '+v.rb[2]+'.')}})},
+ c2_lozka(){const v=V();if(S.done.c2_lozka)return toast('Pod materacem łóżka nr '+v.rb[2]+' nic już nie ma.');
+   gridPick({title:'Łóżka',text:'Na ramach łóżek przykręcone są blaszki z numerami 1–16. Pod którym materacem szukać?',n:16,cols:4,correct:v.rb[2],bad:'Pod materacem coś się poruszyło. Szybko cofasz rękę.',
+     ok:i=>{S.done.c2_lozka=1;save();give('notatka');addNote('Notatka (II): '+NOTE2.replace(/<br>/g,' '));showNote('Pod materacem łóżka nr '+i,NOTE2)}})},
+ c2_mis(){if(S.done.c2_mis)return toast('Pluszowy miś bez wypełnienia. Patrzy szklanymi oczami.');if(S.sel!=='srubokret'){AU.whisper();return toast('Pluszowy miś na parapecie. Ma przyszyte… śrubki? Głowa jest obrócona w twoją stronę.')}
+   take('srubokret');S.done.c2_mis=1;save();give('pozytywka');toast('Odkręcasz śrubki. W środku misia – mała pozytywka.');setTimeout(()=>jump('face'),900)},
+ c2_wozek(){const v=V();if(S.done.c2_wozek)return toast('Na materacu wyryto liczbę '+v.win+'.');
+   timedTrial({title:'Łóżko na kółkach',intro:'Łóżko samo przesuwa się o kilka centymetrów. Skrzypią kółka. Na materacu pojawiają się litery: „ZNASZ KĄTY? ZNASZ FIGURY?”',again:'Łóżko odjechało pod ścianę… i wróciło. Pytania są inne.',N:6,T:70,NEED:5,cats:['kat','fig'],
+     win:()=>{S.done.c2_wozek=1;save();addNote('Łóżko na kółkach: na materacu wyryta liczba '+v.win+'.');toast('Łóżko zatrzymuje się. Na materacu wyryta liczba '+v.win+'.')}})},
+ c2_drzwi(){lockPuzzle({title:'Drzwi izolatki',text:'Drzwi z wizjerem. Zamek na cztery cyfry. Przez wizjer widać tylko ciemność… i oko, które mruga.',digits:4,code:V().code,ok:()=>nextChapter()})},
+ c2_kaloryfer(){AU.drip();toast('Kaloryfer jest lodowaty. Z rury kapie rdzawa woda.')},
+ c2_papiery(){toast(pick(['Kartki z alfabetem. Ktoś wyciął z nich wszystkie cyfry.','Na jednej kartce dziecięcym pismem: „pan profesor liczy gwiazdy”.']))},
+ c2_krzeslo(){AU.creak();toast('Krzesło na kółkach. Siedzenie jest jeszcze wgniecione.')},
+ c2_okno(){toast('Okno zabite od zewnątrz. Między deskami coś cię obserwuje.')},
+
+ /* ===== ROZDZIAŁ III ===== */
+ c3_negatoskop(){const v=V();const p=openPaper();p.append(el('h2',null,'Negatoskop'),H_('p',null,'Na podświetlanej tablicy wisi zdjęcie rentgenowskie czaszki. Ktoś narysował na nim trójkąt i wpisał dwa kąty: <b>'+v.a+'°</b> i <b>'+v.b+'°</b>. Trzeci kąt zamazano.'),H_('div','hand','„Lampa patrzy tam, gdzie wskaże trzeci kąt.”'));
+   if(!S.inv.includes('rentgen')&&!S.done.c3_negatoskop){S.done.c3_negatoskop=1;give('rentgen');addNote('RTG: dwa kąty trójkąta '+v.a+'° i '+v.b+'°. Trzeci = kąt dla lampy.')}save();closeRow(p)},
+ c3_lampa(){const v=V();if(S.flags.lamp)return toast('Lampa operacyjna świeci zimnym światłem na stół.');
+   numPuzzle({title:'Lampa operacyjna',intro:'Ogromna lampa z siedmioma soczewkami. Pokrętło obrotu ma skalę w stopniach. Na którą wartość ją ustawić?',q:()=>({q:'Kąt na pokrętle = trzeci kąt trójkąta z RTG',a:v.c}),ask:'Stopnie:',hint:'Suma kątów w trójkącie to 180°.',
+     ok:()=>{S.flags.lamp=1;save();AU.bang();addNote('Lampa ustawiona na '+v.c+'°.');toast('Soczewki zapalają się jedna po drugiej. Na stole coś leży…');setTimeout(()=>jump('face'),1500)}})},
+ c3_stol(){const v=V();const p=openPaper();p.append(el('h2',null,'Stół operacyjny'),H_('p',null,'W świetle lampy na stole widać kartę zabiegu. Ktoś wpisał w nią działanie:'),H_('div','prob','2<sup>'+v.m+'</sup> · 2<sup>'+v.n+'</sup> = 2<sup>x</sup>'),H_('div','hand','„x = numer bębna, w którym schowałem klucz.”'));
+   S.done.c3_stol=1;addNote('Karta zabiegu: 2^'+v.m+' · 2^'+v.n+' = 2^x, x = numer bębna.');save();closeRow(p)},
+ c3_bebny(){const v=V();if(S.done.c3_bebny)return toast('Bęben nr '+v.k+' jest pusty.');
+   gridPick({title:'Bębny sterylizacyjne',text:'Na półkach stoi 16 metalowych bębnów z numerami. Który otworzyć?',n:16,cols:4,correct:v.k,bad:'W bębnie coś zachrobotało. To tylko rdza… chyba.',ok:i=>{S.done.c3_bebny=1;save();give('klucz');addNote('Bęben nr '+i+': klucz.');toast('W bębnie nr '+i+' leży mały klucz.')}})},
+ c3_szafa(){if(S.done.c3_szafa)return toast('Szafa jest pusta.');if(S.sel!=='klucz')return toast('Drewniana szafa na leki. Zamknięta na klucz.');take('klucz');S.done.c3_szafa=1;save();give('magnetofon');give('notatka');AU.creak();addNote('Notatka (III): '+NOTE3);toast('W szafie: magnetofon szpulowy i notatka.');setTimeout(()=>showNote('Notatka',NOTE3),400)},
+ c3_gaza(){const v=V();if(S.done.c3_gaza)return toast('Pod gazą była karteczka z równaniem.');const p=openPaper();p.append(el('h2',null,'Pod brudną gazą'),H_('p',null,'Kartka z licznikiem magnetofonu i równaniem:'),H_('div','prob','x : 3 + 4 = '+v.q),H_('div','hand','„Przewiń taśmę do x. Usłyszysz mnie.”'));
+   S.done.c3_gaza=1;addNote('Gaza: x : 3 + 4 = '+v.q+' → przewinąć taśmę do x.');save();closeRow(p)},
+ c3_okno(){const v=V();if(S.done.c3_okno)return toast('Na szybie odcisk dłoni i liczba '+v.win+'.');
+   timedTrial({title:'Okno pracowni',intro:'Szyba zachodzi parą od środka, choć nikogo tu nie ma. Ktoś pisze na niej palcem pytania o wzory.',again:'Para znika i pojawia się znowu. Pytania są inne.',N:6,T:75,NEED:5,cats:['wzor','pot'],
+     win:()=>{S.done.c3_okno=1;save();addNote('Okno pracowni: liczba '+v.win+'. Drzwi pracowni się odblokowały.');toast('Na szybie zostaje odcisk dłoni. W drzwiach pracowni coś szczęka.')}})},
+ c3_drzwi(){if(!S.done.c3_okno)return toast('Drzwi są zablokowane. Ktoś trzyma klamkę od drugiej strony.');lockPuzzle({title:'Drzwi pracowni',text:'Zamek na cztery cyfry. Na framudze wyryto strzałkę w lewo: ←',digits:4,code:V().code,ok:()=>nextChapter()})},
+ c3_zegar(){AU.bell(660);toast('Zegar pokazuje 4:38. Wskazówka sekundowa drga w miejscu.')},
+ c3_aparat(){toast('Aparat do narkozy. Manometr pokazuje zero. Rurki są jeszcze wilgotne.')},
+ c3_reflektor(){AU.creak();toast('Przewrócony reflektor. Kiedy na niego świecisz, coś w nim odbija się – twoja twarz… i druga, za tobą.')},
+ c3_gruz(){toast('Rozbite szkło i stare klisze. Na jednej widać rękę z sześcioma palcami.')},
+
+ /* ===== ROZDZIAŁ IV ===== */
+ c4_skrzynka(){const v=V();if(S.done.c4_skrzynka)return toast('Schemat w skrzynce: przełącznik nr '+v.s+'.');
+   numPuzzle({title:'Skrzynka elektryczna',intro:'W skrzynce wisi schemat narysowany w układzie współrzędnych. Zaznaczono dwa punkty: <b>A('+v.A[0]+', '+v.A[1]+')</b> i <b>B('+v.B[0]+', '+v.B[1]+')</b>. Dopisek: „przełącznik = odległość AB”.',q:()=>({q:'Ile wynosi odległość AB?',a:v.s}),ask:'Odległość:',hint:'Narysuj trójkąt prostokątny: przyprostokątne to różnica współrzędnych x i różnica współrzędnych y. Potem Pitagoras.',
+     ok:()=>{S.done.c4_skrzynka=1;save();addNote('Skrzynka: odległość AB = '+v.s+' = numer przełącznika.');toast('Odległość '+v.s+'. Przełącznik nr '+v.s+'…')}})},
+ c4_panel(){const v=V();if(S.flags.power)return toast('Silniki pracują. Na panelu świecą zielone lampki.');
+   gridPick({title:'Panel sterowania',text:'12 zardzewiałych przełączników. Tylko jeden uruchamia zasilanie korytarza.',n:12,cols:6,correct:v.s,bad:'Iskry! Gdzieś w ciemności coś krzyknęło.',ok:()=>{S.flags.power=1;S.done.c4_panel=1;save();AU.motor(true);AU.bang();toast('Silnik rusza z rykiem. W korytarzu zapalają się lampy.');setTimeout(()=>jump('dark'),2200)}})},
+ c4_silnik(){const v=V();const p=openPaper();p.append(el('h2',null,'Silnik'),H_('p',null,'Na obudowie przykręcona tabliczka: <b>ZBIORNIK OLEJU '+v.a+' dm × '+v.b+' dm × '+v.c+' dm</b>.'),H_('div','hand','Ktoś dopisał kredą: „szafka = ile litrów”'));S.done.c4_silnik=1;addNote('Tabliczka silnika: zbiornik '+v.a+'×'+v.b+'×'+v.c+' dm. Szafka = litry.');save();closeRow(p)},
+ c4_szafka(){if(S.done.c4_szafka)return toast('Szafka elektryczna jest pusta.');const v=V();lockPuzzle({title:'Szafka elektryczna',text:'Metalowa szafka na trzycyfrowy szyfr. Obok symbol: <b>ℓ</b> (litry).',digits:3,code:pad(v.vol,3),
+   ok:()=>{S.done.c4_szafka=1;save();give('magnes');AU.creak();toast('W środku: silny magnes na długim sznurku.')}})},
+ c4_dziura(){const v=V();if(S.done.c4_dziura)return toast('Dziura w podłodze. Na dnie stoi woda.');if(S.sel!=='magnes')return toast('W dziurze w podłodze coś błyszczy. Za głęboko, żeby sięgnąć ręką.');
+   take('magnes');S.done.c4_dziura=1;save();give('klucz');addNote('Klucz z dziury. Przywieszka: √'+(v.n*v.n)+'.');AU.drip();toast('Magnes przyciąga klucz. Przywieszka: √'+(v.n*v.n)+'.');setTimeout(()=>{if(Math.random()<.7)jump('face')},700)},
+ c4_drzwiK(){const v=V();if(S.done.c4_drzwiK)return toast('Drzwi nr '+v.n+' są otwarte. Za nimi pusty pokój.');if(S.sel!=='klucz')return toast('Wzdłuż korytarza stoją ponumerowane drzwi. Wszystkie zamknięte.');
+   gridPick({title:'Drzwi w korytarzu',text:'Masz klucz z przywieszką „√'+(v.n*v.n)+'”. Które drzwi otworzyć?',n:20,cols:5,correct:v.n,bad:'Klucz nie pasuje. Zza drzwi słychać oddech.',
+     ok:i=>{take('klucz');S.done.c4_drzwiK=1;save();give('notatka');addNote('Notatka (IV): '+NOTE4);showNote('Pokój nr '+i,NOTE4)}})},
+ c4_zawor(){const v=V();if(S.done.c4_zawor)return toast('Zawór zakręcony. Cisza.');
+   numPuzzle({title:'Zawór i manometr',intro:'Z rury syczy para. Manometr: ciśnienie spadło z <b>'+v.P+'</b> do <b>'+v.Q+'</b> kPa. Na zaworze skala w procentach.',q:()=>({q:'O ile procent spadło ciśnienie?',a:v.p}),ask:'Procent:',hint:'Spadek = różnica / wartość początkowa · 100%.',
+     ok:()=>{S.done.c4_zawor=1;save();AU.hiss(false);addNote('Zawór: spadek ciśnienia o '+v.p+'%.');toast('Syk ustaje. W ciszy słychać, jak ktoś liczy za ścianą.')}})},
+ c4_okno(){if(S.done.c4_okno)return toast('Przez okno widać tylko ziemię. Okno jest pod powierzchnią.');
+   timedTrial({title:'Okno w podziemiach',intro:'Okno wychodzi… na ziemię. Ktoś stuka w szybę od drugiej strony. Pyta o potęgi i statystykę.',again:'Stukanie ustaje. I wraca. Pytania są inne.',N:6,T:70,NEED:5,cats:['pot','stat'],
+     win:()=>{S.done.c4_okno=1;save();toast('Stukanie milknie. Drzwi maszynowni odblokowane.');addNote('Okno w podziemiach: drzwi maszynowni odblokowane.')}})},
+ c4_drzwi(){if(!S.done.c4_okno)return toast('Drzwi nie ustępują. Coś stuka w okno w korytarzu.');lockPuzzle({title:'Drzwi maszynowni',text:'Pancerne drzwi z zamkiem na cztery cyfry.',digits:4,code:V().code,ok:()=>nextChapter()})},
+ c4_silnik2(){toast('Mały silnik. Jest ciepły, choć nie działał od lat.')},
+ c4_lampa(){toast(S.flags.power?'Lampa brzęczy i miga. W jej świetle widać coś na podłodze.':'Lampa pod sufitem. Martwa.')},
+
+ /* ===== ROZDZIAŁ V ===== */
+ c5_kolumna(){const p=openPaper();p.append(el('h2',null,'Kolumna'),H_('p',null,'Na kolumnie wymalowano wielkimi literami: <b>MCMLXXIX</b>. Pod spodem mniejsze: „rok, w którym mnie zamknęli na zawsze”.'));S.done.c5_kolumna=1;addNote('Kolumna: MCMLXXIX (liczba rzymska).');save();closeRow(p)},
+ c5_wozek(){if(S.done.c5_wozek)return toast('Wózek stoi pod ścianą. Koło wciąż się kręci.');S.done.c5_wozek=1;save();jump('dark');setTimeout(()=>{give('lom');toast('Wózek sam przetoczył się o metr. Pod siedziskiem leżał łom.')},1400)},
+ c5_dziura(){if(S.done.c5_dziura)return toast('Pod deskami było tylko jedno pudełko.');if(S.sel!=='lom')return toast('Podłoga jest zerwana. Pod jedną z desek coś leży, ale deska jest przybita.');
+   take('lom');S.done.c5_dziura=1;save();give('dziennik');addNote('Notatka (V): '+NOTE5);AU.creak();showNote('Dziennik profesora',NOTE5)},
+ c5_szkielet(){const v=V();if(S.done.c5_szkielet)return toast('Model szkieletu. Wzrost człowieka: '+v.h+' cm.');
+   numPuzzle({title:'Model szkieletu',intro:'Anatomiczny model. Na podstawie tabliczka: <b>SKALA 1:5, wysokość modelu '+v.m+' cm</b>. Ktoś dopisał: „ile miałby ten człowiek?”',q:()=>({q:'Prawdziwy wzrost (w cm):',a:v.h}),ask:'Centymetry:',hint:'Skala 1:5 znaczy, że w rzeczywistości wszystko jest 5 razy większe.',
+     ok:()=>{S.done.c5_szkielet=1;save();addNote('Szkielet: prawdziwy wzrost '+v.h+' cm.');toast('Czaszka modelu obraca się powoli w twoją stronę.')}})},
+ c5_szafka(){if(S.done.c5_szafka)return toast('Szafka jest pusta.');const v=V();lockPuzzle({title:'Szafka w drzwiach',text:'Wąska szafka z zamkiem na trzy cyfry. Na drzwiczkach: „wzrost”.',digits:3,code:pad(v.h,3),ok:()=>{S.done.c5_szafka=1;save();give('klucz2');toast('W szafce: klucz do ostatnich drzwi.')}})},
+ c5_kroplowka(){if(S.done.c5_kroplowka)return toast('Kroplówka kapie równo. Raz… dwa… trzy…');
+   timedTrial({title:'Ostatnie pytania profesora',intro:'Kroplówka zaczyna kapać, choć worek jest pusty. Z każdą kroplą głos profesora zadaje pytanie. To jego ostatni egzamin.',again:'Krople przyspieszają. Profesor zaczyna od nowa – innymi pytaniami.',N:8,T:110,NEED:7,cats:['fig','kat','wzor','pot','stat'],
+     win:()=>{S.done.c5_kroplowka=1;save();addNote('Zdałeś ostatni egzamin profesora.');toast('Kapanie ustaje. Ktoś cicho mówi: „Dobrze. Bardzo dobrze.”');speak('Dobrze. Bardzo dobrze.')}})},
+ c5_drzwi(){if(!S.inv.includes('klucz2'))return toast('Drzwi zamknięte na klucz i na szyfr.');if(!S.done.c5_kroplowka)return toast('Klucz wchodzi do zamka, ale nie chce się przekręcić. „Najpierw moje pytania” – szepcze ktoś.');
+   lockPuzzle({title:'Ostatnie drzwi',text:'Klucz przekręcony. Zostaje szyfr: cztery cyfry.',digits:4,code:V().code,ok:()=>ending()})},
+ c5_lampa(){AU.creak();toast('Lampa kołysze się, choć nie ma przeciągu.')},
+ c5_drzwiDal(){toast('Daleko, w drzwiach na końcu sali, ktoś stoi. Kiedy świecisz – znika.');AU.whisper()},
+ c5_okno(){toast('Za oknem świta. Albo tylko ci się wydaje.')},
+ c5_lozko(){toast('Łóżko zasłane idealnie. Na poduszce leży kartka z jednym słowem: „DZIĘKUJĘ”.')},
+ c5_lampy(){AU.setHum(true);setTimeout(()=>AU.setHum(false),1500);toast('Jarzeniówki mrugają raz. Potem gasną.')}
+};
+function inspect(it){if(it==='teczka'){const p=openPaper();p.append(el('h2',null,'Teczka nr '+V().eqx));showChart(p);closeRow(p);return}
+ if(it==='notatka'){showNote('Notatka profesora',[0,NOTE1,NOTE2,NOTE3,NOTE4,NOTE5][S.ch]);return}
+ if(it==='radio')return radioPuzzle();
+ if(it==='karta'){const p=openPaper();p.append(el('h2',null,'Karta nocy'));nightsChart(p);closeRow(p);return}
+ if(it==='pozytywka')return musicboxPuzzle();
+ if(it==='rentgen'){const v=V();showNote('Zdjęcie RTG','Trójkąt narysowany na czaszce: kąty '+v.a+'° i '+v.b+'°. Trzeci zamazany.<br>„Lampa patrzy tam, gdzie wskaże trzeci kąt.”');return}
+ if(it==='magnetofon')return tapePuzzle();
+ if(it==='dziennik'){showNote('Dziennik profesora',NOTE5);return}
+ toast(ITEMS[it].n+'. Stuknij miejsce w pokoju, żeby go użyć.')}
+function radioPuzzle(){const v=V();if(S.done.radio){showNote('Radio','Szum. Czasem przebija się szept: „'+v.seq.n+'”.');return}
+ AU.radio(true);const sq=v.seq,said=sq.s.join(', ');const spoken=speak(sq.s.join('… ')+'… i co dalej?');
+ numPuzzle({title:'Radio',intro:'Kręcisz gałką. Przez szum przebija się monotonny męski głos czytający liczby'+(spoken?'':' (napisy)')+': „'+said+', …”. Potem cisza – jakby czekał na odpowiedź.',q:()=>({q:said+', ?',a:sq.n}),ask:'Jaka liczba powinna paść następna?',hint:sq.h,
+  ok:()=>{AU.radio(false);S.done.radio=1;save();addNote('Radio: głos podał liczbę '+sq.n+'.');speak('Dobrze… '+sq.n+'.');toast('Głos w radiu powtarza: „'+sq.n+'”. Potem krzyk i cisza.');setTimeout(()=>{if(S.scare>0)AU.scream(.6)},2200)}})}
+function musicboxPuzzle(){const v=V();if(S.done.c2_poz){showNote('Pozytywka','Melodia gra liczbę: '+v.seq.n+'.');return}const sq=v.seq;AU.musicbox(sq.s.slice(0,4).map(x=>Math.min(x,9)));
+ numPuzzle({title:'Pozytywka',intro:'Nakręcasz pozytywkę. Gra krótkie frazy – i cicho śpiewa liczby: „'+sq.s.join(', ')+', …”. Potem melodia urywa się w pół taktu.',q:()=>({q:sq.s.join(', ')+', ?',a:sq.n}),ask:'Jaka liczba dokończy melodię?',hint:sq.h,
+  ok:()=>{S.done.c2_poz=1;save();addNote('Pozytywka: liczba '+sq.n+'.');toast('Pozytywka gra do końca. Ostatnia nuta brzmi jak: „'+sq.n+'”.')}})}
+function tapePuzzle(){const v=V();if(S.done.c3_tape){showNote('Magnetofon',NOTE3);return}
+ numPuzzle({title:'Magnetofon',intro:'Szpulowy magnetofon z licznikiem. Do której pozycji przewinąć taśmę?',q:()=>({q:'x : 3 + 4 = '+v.q,a:v.x}),ask:'Pozycja licznika (x):',hint:'Odejmij 4 od obu stron, potem pomnóż przez 3.',
+  ok:()=>{S.done.c3_tape=1;save();AU.radio(true);setTimeout(()=>AU.radio(false),5000);const t='Bęben razy kąt. Cztery cyfry. Od końca. Pamiętaj… od końca.';speak(t);addNote('Taśma: „'+t+'”');showNote('Głos z taśmy','„'+t+'”')}})}
+
+/* ================= ROZDZIAŁY, NOTATNIK, START ================= */
+function nextChapter(){AU.bang();const n=S.ch+1;if(!CHAPTERS[n])return ending();S.ch=n;S.inv=[];S.sel=null;S.v[n]=GENS[n]();save();drawInv();
+ loadChapter(n).then(()=>{setView(CHAPTERS[n].views[0]);AU.ambient(CHAPTERS[n].root);story('Rozdział '+['','I','II','III','IV','V'][n],CHAPTERS[n].name,CHAPTERS[n].intro,()=>{})})}
+function ending(){S.finished=1;save();AU.good();story('Epilog','Świt',['Zamek puszcza. Za drzwiami nie ma kolejnego pokoju. Jest wyjście na zewnątrz – i pierwsze światło poranka.','W progu stoi wysoki mężczyzna w szpitalnej piżamie. Uśmiecha się. Pierwszy raz od czterdziestu siedmiu lat.','„Nikt mi nie wierzył, że liczby prowadzą do drzwi. Ty mi uwierzyłeś. Ty je otworzyłeś.”','Profesor Aleksander Wolański przechodzi przez próg i rozpływa się w świetle.','Za tobą, w pustym Pawilonie C, po raz pierwszy od lat panuje cisza.','KONIEC'],()=>{$('#cover').hidden=false;$('#contTxt').textContent='Gra ukończona! Możesz zacząć od nowa w Notatniku.'})}
 $('#bN').onclick=()=>{AU.init();const p=openPaper();p.append(el('h2',null,'Notatnik'),el('p','sub','Twoje zapiski. Liczby trzeba jeszcze zrozumieć.'));const jr=el('div','jr');(S.notes.length?S.notes:['Nic jeszcze nie znalazłeś. Świeć latarką po kątach.']).forEach(n=>jr.append(el('div','e','• '+n)));p.append(jr);
- const r=el('div','row');const c=btn('Zamknij');c.onclick=closePaper;const rs=btn('Zacznij od nowa','sec');let arm=false;rs.onclick=()=>{if(!arm){arm=true;rs.textContent='Na pewno? Stuknij jeszcze raz';return}const sc=S.scare,so=S.sound;S=newState();S.scare=sc;S.sound=so;save();closePaper();drawInv();setView('izba');$('#cover').hidden=false;$('#contTxt').textContent=''};r.append(c,rs);p.append(r)};
+ const r=el('div','row');const c=btn('Zamknij');c.onclick=closePaper;const rs=btn('Zacznij od nowa','sec');let arm=false;rs.onclick=()=>{if(!arm){arm=true;rs.textContent='Na pewno? Stuknij jeszcze raz';return}const sc=S.scare,so=S.sound;S=newState();S.scare=sc;S.sound=so;save();closePaper();drawInv();loadChapter(1).then(()=>setView('izba'));$('#cover').hidden=false;$('#contTxt').textContent=''};r.append(c,rs);p.append(r)};
 $('#bS').onclick=()=>{AU.init();AU.on(!S.sound);$('#bS').textContent=S.sound?'♪':'♪̸'};
 function story(k,t,lines,cb){const s=$('#story'),b=$('#storyBox');b.innerHTML='';b.append(el('div','k',k),el('h2',null,t));const ps=lines.map(l=>{const p=el('p',null,l);b.append(p);return p});const go=btn('Dalej','red');go.style.marginTop='18px';go.style.opacity='0';go.style.transition='opacity 1s';b.append(go);s.hidden=false;
  ps.forEach((p,i)=>setTimeout(()=>p.classList.add('on'),600+i*1900));setTimeout(()=>go.style.opacity='1',600+ps.length*1900);go.onclick=()=>{s.hidden=true;cb&&cb()}}
@@ -464,11 +585,11 @@ document.addEventListener('visibilitychange',()=>{document.hidden?quiet():wake()
 const seg=$('#segScare');const segDraw=()=>[...seg.children].forEach(b=>b.classList.toggle('on',+b.dataset.v===S.scare));seg.onclick=e=>{const v=e.target.dataset&&e.target.dataset.v;if(v!=null){S.scare=+v;save();segDraw()}};segDraw();
 document.documentElement.style.setProperty('--noise','url('+NOISE.toDataURL()+')');
 $('#bS').textContent=S.sound?'♪':'♪̸';
-if(Object.keys(S.done).length)$('#contTxt').textContent='Masz zapisany postęp. Możesz go wyzerować w Notatniku.';
-$('#bGo').onclick=()=>{AU.init();if(AU.ctx){AU.ctx.resume().catch(()=>{});AU.ambient(55)}$('#cover').hidden=true;
- if(!S.seen.intro){story('Rozdział I','Izba przyjęć',['Pawilon C zamknięto w 1979 roku, po tym, jak z oddziału zniknął pacjent – profesor Aleksander Wolański, genialny matematyk.','Pielęgniarki mówiły, że nocami liczył na głos. Że w liczbach widział drzwi.','Wchodzisz przez wybite okno. Latarka to jedyne światło. Drzwi za tobą zamykają się same.','Gdzieś w ciemności ktoś zaczyna cicho liczyć.'],()=>{S.seen.intro=1;save()})}};
-setView(S.view);drawInv();
-loadAll().then(()=>requestAnimationFrame(frame)).catch(e=>{$('#err').hidden=false;$('#err').textContent=e.message});
+if(S.finished)$('#contTxt').textContent='Gra ukończona! Możesz zacząć od nowa w Notatniku.';else if(Object.keys(S.done).length||S.ch>1)$('#contTxt').textContent='Zapisany postęp: rozdział '+['','I','II','III','IV','V'][S.ch]+' – '+CHAPTERS[S.ch].name+'. Wyzerujesz go w Notatniku.';
+$('#bGo').onclick=()=>{AU.init();if(AU.ctx){AU.ctx.resume().catch(()=>{});AU.ambient(CHAPTERS[S.ch].root)}$('#cover').hidden=true;if(S.finished){const sc=S.scare,so=S.sound;S=newState();S.scare=sc;S.sound=so;save();drawInv();loadChapter(1).then(()=>setView('izba'))}
+ if(!S.seen['intro'+S.ch]){S.seen['intro'+S.ch]=1;save();story('Rozdział '+['','I','II','III','IV','V'][S.ch],CHAPTERS[S.ch].name,CHAPTERS[S.ch].intro,()=>{})}};
+drawInv();
+loadChapter(S.ch).then(()=>{setView(CHAPTERS[S.ch].views.includes(S.view)?S.view:CHAPTERS[S.ch].views[0]);requestAnimationFrame(frame)}).catch(e=>{$('#err').hidden=false;$('#err').textContent=e.message});
 </script>
 </body>
 </html>
