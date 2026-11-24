@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Próbki głosu – Pawilon C</title>
+<style>
+body{margin:0;background:#111;color:#e6e1d4;font-family:-apple-system,system-ui,"Segoe UI",sans-serif;font-size:17px}
+.w{max-width:760px;margin:0 auto;padding:18px 16px 60px;display:grid;gap:12px}
+h1{font-size:24px;margin:0}
+p{margin:0;color:#b8b2a4;line-height:1.5}
+.r{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+input,select,button{font-size:17px;padding:8px 12px;border-radius:8px;border:1px solid #555;background:#222;color:#eee}
+button{cursor:pointer}
+.v{display:grid;gap:8px;padding:12px;border:1px solid #333;border-radius:12px;background:#1a1a1a}
+.v .n{font-weight:600}
+.v .n small{display:block;font-weight:400;color:#999;font-size:13px}
+.st{color:#c9b98f;min-height:1.4em}
+.big{font-size:20px;padding:12px 18px;background:#5a1a1a;border-color:#8a2a2a}
+</style>
+</head>
+<body>
+<div class="w">
+  <h1>Próbki szeptu – Pawilon C</h1>
+  <p>Najpierw stuknij „Włącz dźwięk”. Potem wybierz tekst i stukaj ▶ przy głosach. Najlepiej w słuchawkach, iPad nie może być wyciszony.</p>
+  <div class="r"><button class="big" id="unlock">Włącz dźwięk</button></div>
+  <div class="r"><label for="nm">Imię</label><input id="nm" type="text" value="Lena" style="width:140px"></div>
+  <div class="r"><label for="tx">Tekst</label><select id="tx"><option value="rot" selected>Zmienia się: chodź / uważaj / za tobą</option><option value="ch">Ej, Lena, chodź…</option><option value="uw">Ej, Lena, uważaj…</option><option value="zt">Ej, Lena, za tobą…</option><option value="j1">Ej, Lena…</option></select>
+    <label for="sp">Tempo</label><select id="sp"><option value=".31">bardzo wolno</option><option value=".45" selected>wolno</option><option value=".6">trochę wolniej</option><option value=".85">normalnie</option></select>
+    <button id="stop">Zatrzymaj</button></div>
+  <div class="st" id="st">Szukam polskich głosów…</div>
+  <div id="list" style="display:grid;gap:10px"></div>
+  <p>Brakuje ładnych głosów? Na iPadzie: Ustawienia → Dostępność → Treść mówiona → Głosy → Polski. Można tam pobrać np. Ewa, Krzysztof albo wersje „rozszerzone”. Po pobraniu odśwież tę stronę.</p>
+</div>
+<script>
+let run=0;
+const TAILS={ch:'chodź…',uw:'uważaj…',zt:'za tobą…'};let order=[];
+function text(nm,i){const t=document.getElementById('tx').value;if(t==='j1')return 'Ej, '+nm+'…';if(t==='rot'){if(i===0)order=Object.values(TAILS).sort(()=>Math.random()-.5);return 'Ej, '+nm+', '+order[i%3]}return 'Ej, '+nm+', '+TAILS[t]}
+function play(vc,pitch,label){speechSynthesis.cancel();const my=++run;const nm=document.getElementById('nm').value.trim()||'Lena';const st=document.getElementById('st');st.textContent='Odtwarzam: '+label+'…';const rate=+document.getElementById('sp').value;const vols=[.35,.28,.22];let i=0;
+ const say=()=>{if(my!==run)return;if(i>=3){st.textContent='Koniec: '+label+'.';return}const u=new SpeechSynthesisUtterance(text(nm,i));u.lang='pl-PL';u.rate=rate*(i===2?.85:1);u.pitch=pitch;u.volume=vols[i];i++;if(vc)u.voice=vc;
+  let d=false;const f=()=>{if(d)return;d=true;setTimeout(say,2000)};u.onend=f;u.onerror=f;setTimeout(f,9000);speechSynthesis.speak(u)};say()}
+function build(){const vs=speechSynthesis.getVoices().filter(v=>/^pl/i.test(v.lang));const L=document.getElementById('list');L.innerHTML='';const st=document.getElementById('st');
+ if(!vs.length){st.textContent='Nie znaleziono jeszcze polskich głosów – stuknij „Włącz dźwięk” albo odśwież stronę.';return}st.textContent='Znalezione polskie głosy: '+vs.length+'.';
+ vs.forEach(v=>{const row=document.createElement('div');row.className='v';row.innerHTML='<div class="n">'+v.name+'<small>'+(v.localService?'głos w urządzeniu':'głos z internetu')+'</small></div>';const r=document.createElement('div');r.className='r';
+  [['Niski',.5],['Naturalny',1],['Wysoki',1.4]].forEach(([lab,p])=>{const b=document.createElement('button');b.textContent='▶ '+lab;b.onclick=()=>play(v,p,v.name+' – '+lab.toLowerCase());r.appendChild(b)});row.appendChild(r);L.appendChild(row)})}
+document.getElementById('unlock').onclick=()=>{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);setTimeout(build,300);document.getElementById('unlock').textContent='Dźwięk włączony ✓'};
+document.getElementById('stop').onclick=()=>{run++;speechSynthesis.cancel();document.getElementById('st').textContent='Zatrzymano.'};
+build();speechSynthesis.onvoiceschanged=build;setTimeout(build,800);setTimeout(build,2000);
+</script>
+</body>
+</html>
