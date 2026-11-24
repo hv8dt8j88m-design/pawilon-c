@@ -177,7 +177,7 @@ const AU={ctx:null,cur:null,evT:null,
   const ns=c.createBufferSource();ns.buffer=this.noise;ns.loop=true;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=380;bp.Q.value=.5;const wg=c.createGain();wg.gain.value=.025;ns.connect(bp);bp.connect(wg);wg.connect(g1);ns.start();os.push(ns);
   this.cur={g:g1,o:os};clearTimeout(this.evT);const loop=()=>{this.event();this.evT=setTimeout(loop,3500+Math.random()*7000)};this.evT=setTimeout(loop,4000)},
  setHum(on){if(this.hum)this.hum.gain.setTargetAtTime(on?.006:0,this.ctx.currentTime,.3)},
- event(){const r=Math.random();if(r<.3)this.drip();else if(r<.52)this.steps();else if(r<.72)this.whisper();else if(r<.88)this.creak();else this.bell()},
+ event(){const r=Math.random();if(r<.12){countAloud();return}if(r<.3)this.drip();else if(r<.52)this.steps();else if(r<.72)this.whisper();else if(r<.88)this.creak();else this.bell()},
  env(node,t,a,peak,d){const gg=this.ctx.createGain();gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(peak,t+a);gg.gain.exponentialRampToValueAtTime(.0005,t+a+d);node.connect(gg);return gg},
  pan(node,v){if(this.ctx.createStereoPanner){const p=this.ctx.createStereoPanner();p.pan.value=v;node.connect(p);return p}return node},
  drip(){if(!this.ctx)return;const c=this.ctx,t=c.currentTime,o=c.createOscillator();o.frequency.setValueAtTime(1800+Math.random()*900,t);o.frequency.exponentialRampToValueAtTime(500,t+.08);const gg=this.env(o,t,.002,.08,.15);this.pan(gg,Math.random()*2-1).connect(this.rev);o.start(t);o.stop(t+.3)},
@@ -200,6 +200,10 @@ const AU={ctx:null,cur:null,evT:null,
  radio(on){if(!this.ctx)return;if(!on){if(this.rs){try{this.rs.stop()}catch(e){}this.rs=null}return}const c=this.ctx,s=c.createBufferSource();s.buffer=this.noise;s.loop=true;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1800;bp.Q.value=.7;const gg=c.createGain();gg.gain.value=.09;s.connect(bp);bp.connect(gg);gg.connect(this.dry);s.start();this.rs=s},
  heart(on,rate){clearInterval(this.hb);if(!on||!this.ctx)return;const beat=()=>{const c=this.ctx,t=c.currentTime;[0,.22].forEach(d=>{const o=c.createOscillator();o.frequency.setValueAtTime(58,t+d);o.frequency.exponentialRampToValueAtTime(36,t+d+.15);this.env(o,t+d,.01,.4,.2).connect(this.dry);o.start(t+d);o.stop(t+d+.3)})};beat();this.hb=setInterval(beat,rate||900)}
 };
+const NUMW=['zero','jeden','dwa','trzy','cztery','pięć','sześć','siedem','osiem','dziewięć','dziesięć','jedenaście','dwanaście','trzynaście','czternaście','piętnaście','szesnaście','siedemnaście','osiemnaście','dziewiętnaście','dwadzieścia'];
+function countAloud(force){try{if(!S.sound||!('speechSynthesis' in window))return;if(!force&&(speechSynthesis.speaking||!$('#modal').hidden||!$('#story').hidden||!$('#cover').hidden))return;
+  const a=R(1,9),n=R(4,8),words=[];for(let i=0;i<n&&a+i<=20;i++)words.push(NUMW[a+i]);
+  const u=new SpeechSynthesisUtterance(words.join('… ')+'…');u.lang='pl-PL';u.rate=.55;u.pitch=.05;u.volume=.32;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
 function speak(text){try{if(!('speechSynthesis' in window))return false;const u=new SpeechSynthesisUtterance(text);u.lang='pl-PL';u.rate=.72;u.pitch=.2;u.volume=.9;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(e){return false}}
 
 /* ================= JUMP SCARE (zdjęcia, bez opóźnienia) ================= */
@@ -297,6 +301,21 @@ function extraLights(view){const L=[];if(view==='kartoteka'&&S.flags.fuse)L.push
  if(view==='korytarz'&&S.flags.power){L.push({x:780,y:390,r:420,c:[220,200,150]});L.push({x:810,y:470,r:200,c:[200,180,140]})}
  if(view==='maszynownia'&&S.flags.power)L.push({x:1050,y:330,r:300,c:[90,160,90]});return L}
 
+/* ---- oczy w ciemności (współrzędne zdjęcia) ---- */
+const EYES={korytarz:[{x:700,y:190,s:1.1},{x:600,y:120,s:.9},{x:860,y:230,s:.8},{x:1000,y:110,s:1},{x:720,y:300,s:.7}],izba:[{x:1250,y:250,s:.9},{x:120,y:330,s:1}],kartoteka:[{x:228,y:440,s:.8},{x:476,y:430,s:.6}],
+ sala:[{x:150,y:700,s:1},{x:1500,y:620,s:.9}],izolatka:[{x:1000,y:160,s:1},{x:1480,y:430,s:.8}],operacyjna:[{x:690,y:230,s:.8}],pracownia:[{x:405,y:250,s:.9},{x:120,y:140,s:1}],
+ maszynownia:[{x:640,y:420,s:.8},{x:300,y:200,s:1}],swietlica:[{x:775,y:495,s:.6},{x:1450,y:200,s:.9}],pokoj:[{x:1125,y:500,s:.8},{x:420,y:500,s:.8}]};
+let eyeNext=performance.now()+12000,eyeOn=null;
+function drawEyes(now){const list=EYES[S.view];if(!list)return;const fast=S.view==='korytarz';
+ if(!eyeOn&&now>eyeNext&&$('#modal').hidden){const n=fast?R(1,3):1;eyeOn={t0:now,dur:R(4500,7500),set:shuffle(list).slice(0,n),gone:0};if(Math.random()<.5)AU.whisper()}
+ if(!eyeOn)return;const t=now-eyeOn.t0;let fade=Math.min(1,t/700)*Math.min(1,(eyeOn.dur-t)/600);
+ eyeOn.set.forEach((e,k)=>{const ex=e.x*K,ey=e.y*K,d=Math.hypot(ex-LX,ey-LY);if(d<130&&!eyeOn.gone){eyeOn.gone=now;AU.creak()}});
+ if(eyeOn.gone)fade*=Math.max(0,1-(now-eyeOn.gone)/180);
+ if(t>eyeOn.dur||fade<=0.01&&eyeOn.gone){eyeOn=null;eyeNext=now+(fast?R(7000,16000):R(18000,40000));return}
+ eyeOn.set.forEach((e,k)=>{const ex=e.x*K,ey=e.y*K,s=e.s*K*1.25,blink=((t+k*400)%1700)<130?.12:1,a=fade;
+   [-1,1].forEach(side=>{const cx=ex+side*15*s,gr=g.createRadialGradient(cx,ey,1,cx,ey,16*s);gr.addColorStop(0,'rgba(255,240,200,'+(.55*a)+')');gr.addColorStop(1,'rgba(255,200,120,0)');g.fillStyle=gr;g.beginPath();g.arc(cx,ey,16*s,0,7);g.fill();
+     g.fillStyle='rgba(255,248,225,'+(.95*a)+')';g.beginPath();g.ellipse(cx,ey,6.5*s,3.6*s*blink,0,0,7);g.fill();g.fillStyle='rgba(20,10,5,'+(.9*a)+')';g.beginPath();g.ellipse(cx+Math.sin(now/900)*1.2*s,ey,1.3*s,3*s*blink,0,0,7);g.fill()})})}
+
 /* ================= RENDER ================= */
 let LX=CW*.5,LY=CH_*.55,TX=LX,TY=LY,flick=1,lastF=0;
 const LM=mkCanvas(CW,CH_),lm=LM.getContext('2d'),BASE=mkCanvas(CW,CH_),bx=BASE.getContext('2d');
@@ -313,6 +332,7 @@ function frame(){const now=performance.now();if(now-lastF<33||document.hidden){r
   if(S.sel==='uv'){const ug=lm.createRadialGradient(LX,LY,4,LX,LY,R1*.8);ug.addColorStop(0,'rgba(120,60,255,.55)');ug.addColorStop(1,'rgba(0,0,0,0)');lm.fillStyle=ug;lm.fillRect(0,0,CW,CH_)}
   g.globalCompositeOperation='source-over';g.drawImage(BASE,0,0);g.globalCompositeOperation='multiply';g.drawImage(LM,0,0);g.globalCompositeOperation='screen';
   dust.forEach(d=>{d.y-=d.v;d.x+=Math.sin(now/1500+d.r*9)*.2;if(d.y<0){d.y=CH_;d.x=Math.random()*CW}const dd=Math.hypot(d.x-LX,d.y-LY);if(dd<R1){g.fillStyle='rgba(240,235,220,'+(.5*(1-dd/R1))+')';g.beginPath();g.arc(d.x,d.y,d.r,0,7);g.fill()}});
+  drawEyes(now);
   vw.spots.forEach((sp,i)=>{if(S.done[sp.id]&&!sp.f)return;if(sp.need&&!sp.need())return;const minor=!!sp.f;
     const cx=(sp.x+sp.w/2)*K,cy=(sp.y+sp.h/2)*K,dd=Math.hypot(cx-LX,cy-LY),near=Math.max(0,1-dd/220),pulse=.5+.5*Math.sin(now/650+i*1.7);
     const fr=cl(Math.max(sp.w,sp.h)*K*.5,32,90)*(minor?.7:1),fa=(minor?.025:.045)+.025*pulse+.07*near;
@@ -449,7 +469,7 @@ const HANDLERS={
  okno(){const v=V();if(S.done.okno)return toast('Na szybie widać napisaną palcem liczbę '+v.win+'.');
    timedTrial({title:'Okno',intro:'Za szybą, w ciemności, stoi ktoś w szpitalnej koszuli. Nie rusza się. Na szybie pojawia się napis: „ODPOWIEDZ, ZANIM ZGAŚNIE LATARKA”.',again:'Postać za oknem zniknęła… i znów stoi. Pytania są inne.',N:5,T:60,NEED:4,cats:['fig','kat','wzor'],
      win:()=>{S.done.okno=1;save();addNote('Okno: postać napisała palcem na szybie liczbę '+v.win+'.');toast('Postać znika. Na zaparowanej szybie zostaje liczba '+v.win+'.')}})},
- tabliczka(){showNote('Tabliczka','Wyblakły druk: „PRZYJĘCIA PACJENTÓW – KARTOTEKA OBOK”.<br>Pod spodem długopisem: „On wciąż liczy. Słychać go w radiu.”')},
+ tabliczka(){setTimeout(()=>countAloud(true),800);showNote('Tabliczka','Wyblakły druk: „PRZYJĘCIA PACJENTÓW – KARTOTEKA OBOK”.<br>Pod spodem długopisem: „On wciąż liczy. Słychać go w radiu.”')},
  krzeslo(){AU.creak();toast(pick(['Krzesło jest ciepłe, jakby ktoś przed chwilą wstał.','Na oparciu wydrapano: 1974.','Pod krzesłem leży ołówek. Jeszcze ostry.']))},
  fotel(){AU.whisper();toast(pick(['W fotelu jest wgłębienie, jakby ktoś w nim siedział.','Ktoś szepcze z korytarza…']))},
  drzwi2(){toast('Wąskie drzwi są zamurowane od drugiej strony.')},
@@ -522,7 +542,7 @@ const HANDLERS={
      ok:i=>{take('klucz');S.done.c4_drzwiK=1;save();give('notatka');addNote('Notatka (IV): '+NOTE4);showNote('Pokój nr '+i,NOTE4)}})},
  c4_zawor(){const v=V();if(S.done.c4_zawor)return toast('Zawór zakręcony. Cisza.');
    numPuzzle({title:'Zawór i manometr',intro:'Z rury syczy para. Manometr: ciśnienie spadło z <b>'+v.P+'</b> do <b>'+v.Q+'</b> kPa. Na zaworze skala w procentach.',q:()=>({q:'O ile procent spadło ciśnienie?',a:v.p}),ask:'Procent:',hint:'Spadek = różnica / wartość początkowa · 100%.',
-     ok:()=>{S.done.c4_zawor=1;save();AU.hiss(false);addNote('Zawór: spadek ciśnienia o '+v.p+'%.');toast('Syk ustaje. W ciszy słychać, jak ktoś liczy za ścianą.')}})},
+     ok:()=>{S.done.c4_zawor=1;save();AU.hiss(false);addNote('Zawór: spadek ciśnienia o '+v.p+'%.');toast('Syk ustaje. W ciszy słychać, jak ktoś liczy za ścianą.');setTimeout(()=>countAloud(true),600)}})},
  c4_okno(){if(S.done.c4_okno)return toast('Przez okno widać tylko ziemię. Okno jest pod powierzchnią.');
    timedTrial({title:'Okno w podziemiach',intro:'Okno wychodzi… na ziemię. Ktoś stuka w szybę od drugiej strony. Pyta o potęgi i statystykę.',again:'Stukanie ustaje. I wraca. Pytania są inne.',N:6,T:70,NEED:5,cats:['pot','stat'],
      win:()=>{S.done.c4_okno=1;save();toast('Stukanie milknie. Drzwi maszynowni odblokowane.');addNote('Okno w podziemiach: drzwi maszynowni odblokowane.')}})},
@@ -539,7 +559,7 @@ const HANDLERS={
    numPuzzle({title:'Model szkieletu',intro:'Anatomiczny model. Na podstawie tabliczka: <b>SKALA 1:5, wysokość modelu '+v.m+' cm</b>. Ktoś dopisał: „ile miałby ten człowiek?”',q:()=>({q:'Prawdziwy wzrost (w cm):',a:v.h}),ask:'Centymetry:',hint:'Skala 1:5 znaczy, że w rzeczywistości wszystko jest 5 razy większe.',
      ok:()=>{S.done.c5_szkielet=1;save();addNote('Szkielet: prawdziwy wzrost '+v.h+' cm.');toast('Czaszka modelu obraca się powoli w twoją stronę.')}})},
  c5_szafka(){if(S.done.c5_szafka)return toast('Szafka jest pusta.');const v=V();lockPuzzle({title:'Szafka w drzwiach',text:'Wąska szafka z zamkiem na trzy cyfry. Na drzwiczkach: „wzrost”.',digits:3,code:pad(v.h,3),ok:()=>{S.done.c5_szafka=1;save();give('klucz2');toast('W szafce: klucz do ostatnich drzwi.')}})},
- c5_kroplowka(){if(S.done.c5_kroplowka)return toast('Kroplówka kapie równo. Raz… dwa… trzy…');
+ c5_kroplowka(){if(S.done.c5_kroplowka){countAloud(true);return toast('Kroplówka kapie równo. Raz… dwa… trzy…')}
    timedTrial({title:'Ostatnie pytania profesora',intro:'Kroplówka zaczyna kapać, choć worek jest pusty. Z każdą kroplą głos profesora zadaje pytanie. To jego ostatni egzamin.',again:'Krople przyspieszają. Profesor zaczyna od nowa – innymi pytaniami.',N:8,T:110,NEED:7,cats:['fig','kat','wzor','pot','stat'],
      win:()=>{S.done.c5_kroplowka=1;save();addNote('Zdałeś ostatni egzamin profesora.');toast('Kapanie ustaje. Ktoś cicho mówi: „Dobrze. Bardzo dobrze.”');speak('Dobrze. Bardzo dobrze.')}})},
  c5_drzwi(){if(!S.inv.includes('klucz2'))return toast('Drzwi zamknięte na klucz i na szyfr.');if(!S.done.c5_kroplowka)return toast('Klucz wchodzi do zamka, ale nie chce się przekręcić. „Najpierw moje pytania” – szepcze ktoś.');
@@ -577,7 +597,7 @@ function ending(){S.finished=1;save();AU.good();story('Epilog','Świt',['Zamek p
 $('#bN').onclick=()=>{AU.init();const p=openPaper();p.append(el('h2',null,'Notatnik'),el('p','sub','Twoje zapiski. Liczby trzeba jeszcze zrozumieć.'));const jr=el('div','jr');(S.notes.length?S.notes:['Nic jeszcze nie znalazłeś. Świeć latarką po kątach.']).forEach(n=>jr.append(el('div','e','• '+n)));p.append(jr);
  const r=el('div','row');const c=btn('Zamknij');c.onclick=closePaper;const rs=btn('Zacznij od nowa','sec');let arm=false;rs.onclick=()=>{if(!arm){arm=true;rs.textContent='Na pewno? Stuknij jeszcze raz';return}const sc=S.scare,so=S.sound;S=newState();S.scare=sc;S.sound=so;save();closePaper();drawInv();loadChapter(1).then(()=>setView('izba'));$('#cover').hidden=false;$('#contTxt').textContent=''};r.append(c,rs);p.append(r)};
 $('#bS').onclick=()=>{AU.init();AU.on(!S.sound);$('#bS').textContent=S.sound?'♪':'♪̸'};
-function story(k,t,lines,cb){const s=$('#story'),b=$('#storyBox');b.innerHTML='';b.append(el('div','k',k),el('h2',null,t));const ps=lines.map(l=>{const p=el('p',null,l);b.append(p);return p});const go=btn('Dalej','red');go.style.marginTop='18px';go.style.opacity='0';go.style.transition='opacity 1s';b.append(go);s.hidden=false;
+function story(k,t,lines,cb){const cb0=cb;cb=()=>{cb0&&cb0();if(lines.some(l=>/licz/i.test(l)))setTimeout(()=>countAloud(true),2500)};const s=$('#story'),b=$('#storyBox');b.innerHTML='';b.append(el('div','k',k),el('h2',null,t));const ps=lines.map(l=>{const p=el('p',null,l);b.append(p);return p});const go=btn('Dalej','red');go.style.marginTop='18px';go.style.opacity='0';go.style.transition='opacity 1s';b.append(go);s.hidden=false;
  ps.forEach((p,i)=>setTimeout(()=>p.classList.add('on'),600+i*1900));setTimeout(()=>go.style.opacity='1',600+ps.length*1900);go.onclick=()=>{s.hidden=true;cb&&cb()}}
 function quiet(){if(AU.ctx&&AU.ctx.state==='running')AU.ctx.suspend().catch(()=>{});try{speechSynthesis.cancel()}catch(e){}}
 function wake(){if(AU.ctx&&S.sound&&$('#cover').hidden)AU.ctx.resume().catch(()=>{})}
