@@ -250,6 +250,7 @@ const VIEWS={
    {id:'okna',x:1100,y:180,w:500,h:350,n:'Okna'}]}
 };
 const DATA={};
+const FLAV=['okna','drzwi2','krzeslo','fotel','tabliczka'];
 async function loadAll(){for(const v of Object.values(VIEWS)){const im=await loadImg(v.img);DATA[v.img]=grade(im)}}
 
 /* rysunki nakładane na zdjęcie (współrzędne zdjęcia 1600×1067) */
@@ -289,7 +290,16 @@ function frame(){const now=performance.now();if(now-lastF<33||document.hidden){r
   const fg2=lm.createRadialGradient(LX,LY,R1*.5,LX,LY,R1*1.9);fg2.addColorStop(0,'rgba(60,56,50,.5)');fg2.addColorStop(1,'rgba(0,0,0,0)');lm.fillStyle=fg2;lm.fillRect(0,0,CW,CH_);
   g.globalCompositeOperation='source-over';g.drawImage(BASE,0,0);g.globalCompositeOperation='multiply';g.drawImage(LM,0,0);g.globalCompositeOperation='screen';
   dust.forEach(d=>{d.y-=d.v;d.x+=Math.sin(now/1500+d.r*9)*.2;if(d.y<0){d.y=CH_;d.x=Math.random()*CW}const dd=Math.hypot(d.x-LX,d.y-LY);if(dd<R1){g.fillStyle='rgba(240,235,220,'+(.5*(1-dd/R1))+')';g.beginPath();g.arc(d.x,d.y,d.r,0,7);g.fill()}});
-  v.spots.forEach(sp=>{if(S.done[sp.id]||sp.id==='okna'||sp.id==='drzwi2')return;if(sp.needFuse&&!S.fuse)return;const cx=(sp.x+sp.w/2)*K,cy=(sp.y+sp.h/2)*K,dd=Math.hypot(cx-LX,cy-LY);if(dd<150){const a=(1-dd/150)*(.35+.35*Math.sin(now/260+cx));g.fillStyle='rgba(255,250,230,'+a+')';g.beginPath();g.arc(cx+Math.sin(now/700)*6,cy-8,2.2,0,7);g.fill();g.beginPath();g.arc(cx-10,cy+6,1.4,0,7);g.fill()}});
+  v.spots.forEach((sp,i)=>{if(S.done[sp.id])return;if(sp.needFuse&&!S.fuse)return;const minor=FLAV.includes(sp.id);
+    const cx=(sp.x+sp.w/2)*K,cy=(sp.y+sp.h/2)*K,dd=Math.hypot(cx-LX,cy-LY),near=Math.max(0,1-dd/220),pulse=.5+.5*Math.sin(now/650+i*1.7);
+    // gęstsza mgiełka wokół przedmiotu – widoczna zawsze, mocniejsza w świetle latarki
+    const fr=cl(Math.max(sp.w,sp.h)*K*.55,38,110)*(minor?.7:1),fa=(minor?.05:.09)+.05*pulse+.12*near;
+    for(let k=0;k<3;k++){const ox=Math.sin(now/1900+k*2.1+i)*fr*.35,oy=Math.cos(now/2300+k*1.3+i)*fr*.2,gr=g.createRadialGradient(cx+ox,cy+oy,2,cx+ox,cy+oy,fr*(1-k*.18));
+      gr.addColorStop(0,'rgba(205,212,225,'+fa+')');gr.addColorStop(1,'rgba(205,212,225,0)');g.fillStyle=gr;g.beginPath();g.arc(cx+ox,cy+oy,fr,0,7);g.fill()}
+    // migoczący błysk (gwiazdka)
+    const sa=(minor?.25:.45)*(.35+.65*pulse)+.5*near,sz=(minor?5:8)+4*pulse+6*near,sxx=cx+Math.sin(now/900+i)*4,syy=cy-6;
+    g.fillStyle='rgba(255,250,225,'+Math.min(1,sa)+')';g.beginPath();g.moveTo(sxx,syy-sz);g.lineTo(sxx+sz*.18,syy-sz*.18);g.lineTo(sxx+sz,syy);g.lineTo(sxx+sz*.18,syy+sz*.18);g.lineTo(sxx,syy+sz);g.lineTo(sxx-sz*.18,syy+sz*.18);g.lineTo(sxx-sz,syy);g.lineTo(sxx-sz*.18,syy-sz*.18);g.closePath();g.fill();
+    g.beginPath();g.arc(sxx,syy,1.8+near*1.5,0,7);g.fill()});
   g.globalCompositeOperation='overlay';g.globalAlpha=.1;g.fillStyle=g.createPattern(GRAIN,'repeat');g.save();g.translate(Math.random()*200,Math.random()*200);g.fillRect(-200,-200,CW+400,CH_+400);g.restore();g.globalAlpha=1;
   g.globalCompositeOperation='source-over';const vg=g.createRadialGradient(CW/2,CH_/2,CH_*.3,CW/2,CH_/2,CH_*.95);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.75)');g.fillStyle=vg;g.fillRect(0,0,CW,CH_);
   requestAnimationFrame(frame)}
@@ -299,7 +309,8 @@ function toCanvas(e){const r=cv.getBoundingClientRect();return [(e.clientX-r.lef
 cv.addEventListener('pointermove',e=>{const [x,y]=toCanvas(e);TX=x;TY=y});
 cv.addEventListener('pointerdown',e=>{const [x,y]=toCanvas(e);TX=x;TY=y;if(e.pointerType!=='mouse'){LX=LX*.3+x*.7;LY=LY*.3+y*.7}});
 cv.addEventListener('click',e=>{if(!$('#modal').hidden)return;const [x,y]=toCanvas(e);const ix=x/K,iy=y/K;const v=VIEWS[S.view];
-  const sp=v.spots.find(s=>ix>=s.x&&ix<=s.x+s.w&&iy>=s.y&&iy<=s.y+s.h);if(!sp){if(S.sel){toast('Tu tego nie użyjesz.')}return}AU.init();interact(sp)});
+  const P=45;let sp=v.spots.find(s=>ix>=s.x&&ix<=s.x+s.w&&iy>=s.y&&iy<=s.y+s.h);
+  if(!sp)sp=v.spots.filter(s=>ix>=s.x-P&&ix<=s.x+s.w+P&&iy>=s.y-P&&iy<=s.y+s.h+P).sort((a,b)=>Math.hypot(a.x+a.w/2-ix,a.y+a.h/2-iy)-Math.hypot(b.x+b.w/2-ix,b.y+b.h/2-iy))[0];if(!sp){if(S.sel){toast('Tu tego nie użyjesz.')}return}AU.init();interact(sp)});
 
 /* ================= UI ================= */
 const modal=$('#modal'),paper=$('#paper');
