@@ -95,7 +95,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
   <div>
     <h1>PAWILON C</h1>
     <div class="s">Szpital psychiatryczny w Tworkach Dolnych. Zamknięty w 1979 roku.</div>
-    <p>Gra-zagadka z jump scare'ami. 5 rozdziałów. Pokoje są ciemne – świeć latarką (przesuwaj palcem po ekranie), szukaj śladów, zbieraj przedmioty i używaj ich (stuknij przedmiot na dole, potem miejsce w pokoju). Zadania wymagają matematyki z egzaminu ósmoklasisty.</p>
+    <p>Gra-zagadka z jump scare'ami. 5 rozdziałów. Pokoje są ciemne – świeć latarką (przesuwaj palcem po ekranie), szukaj śladów, zbieraj przedmioty i używaj ich: stuknij przedmiot na dole (podświetli się), potem miejsce w pokoju. „Obejrzyj” pokazuje jego treść, ponowne stuknięcie przedmiotu albo „Odłóż” go odkłada. Zadania wymagają matematyki z egzaminu ósmoklasisty.</p>
     <p>Wyniki nie są gotowym szyfrem. Trzeba je zrozumieć: to może być numer teczki, łóżka, godzina, kąt albo kolejność.</p>
     <p>Gra zawiera nagłe, głośne wystraszenia. Załóż słuchawki. Zgaś światło.</p>
     <div class="seg" id="segScare"><button type="button" data-v="2">Straszenie: mocne</button><button type="button" data-v="1">łagodne</button><button type="button" data-v="0">wyłączone</button></div><br>
@@ -380,8 +380,11 @@ modal.addEventListener('click',e=>{if(e.target===modal&&!timedRun)closePaper()})
 let toastT;function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),4200)}
 function closeRow(p,label){const r=el('div','row');const c=btn(label||'Zamknij','sec');c.onclick=closePaper;r.append(c);p.append(r);return r}
 function wrong(p){if(p){p.classList.remove('shake');void p.offsetWidth;p.classList.add('shake')}maybeScare();if(!scareRun)AU.sting()}
-function drawInv(){const inv=$('#inv');inv.innerHTML='';S.inv.forEach(it=>{const d=ITEMS[it];const b=el('button','slot'+(S.sel===it?' sel':''));b.type='button';b.innerHTML=d.i+'<small>'+d.n.split(' ')[0]+'</small>';
-  b.onclick=()=>{AU.init();if(S.sel===it){inspect(it)}else{S.sel=it;save();drawInv();toast('Wybrano: '+d.n+'. Stuknij miejsce, by użyć. Stuknij jeszcze raz, by obejrzeć.')}};inv.append(b)})}
+function drawInv(){const inv=$('#inv');inv.innerHTML='';if(S.sel&&!S.inv.includes(S.sel))S.sel=null;
+ S.inv.forEach(it=>{const d=ITEMS[it];const b=el('button','slot'+(S.sel===it?' sel':''));b.type='button';b.innerHTML=d.i+'<small>'+d.n.split(' ')[0]+'</small>';
+  b.onclick=()=>{AU.init();if(S.sel===it){S.sel=null;save();drawInv();toast('Odłożono: '+d.n+'.')}else{S.sel=it;save();drawInv();toast('Trzymasz: '+d.n+'. Stuknij miejsce w pokoju, by go użyć.')}};inv.append(b)});
+ if(S.sel){const o=el('button','slot','🔍');o.type='button';o.innerHTML='🔍<small>Obejrzyj</small>';o.onclick=()=>{AU.init();inspect(S.sel)};
+  const x=el('button','slot');x.type='button';x.innerHTML='✕<small>Odłóż</small>';x.onclick=()=>{S.sel=null;save();drawInv()};inv.append(o,x)}}
 function setView(v){S.view=v;save();const C=CHAPTERS[S.ch];$('#ttl').innerHTML='Pawilon C · '+['','I','II','III','IV','V'][S.ch]+' · <b>'+VIEWS[v].name+'</b>';const other=C.views.find(x=>x!==v);$('#bNav').textContent=VIEWS[other].name+' ▶';
   AU.setHum((v==='kartoteka'&&S.flags.fuse)||(v==='korytarz'&&S.flags.power));AU.motor(v==='maszynownia'&&S.flags.power);AU.hiss(v==='maszynownia'&&!S.done.c4_zawor&&S.ch===4)}
 $('#bNav').onclick=()=>{AU.init();AU.creak();const C=CHAPTERS[S.ch];setView(C.views.find(x=>x!==S.view));if(!S.seen['v_'+S.view]){S.seen['v_'+S.view]=1;save();setTimeout(()=>AU.steps(),900)}};
