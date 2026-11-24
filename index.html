@@ -302,7 +302,7 @@ function extraLights(view){const L=[];if(view==='kartoteka'&&S.flags.fuse)L.push
  if(view==='maszynownia'&&S.flags.power)L.push({x:1050,y:330,r:300,c:[90,160,90]});return L}
 
 /* ---- oczy w ciemności (współrzędne zdjęcia) ---- */
-const EYES={korytarz:[{x:700,y:190,s:1.1},{x:600,y:120,s:.9},{x:860,y:230,s:.8},{x:1000,y:110,s:1},{x:720,y:300,s:.7}],izba:[{x:1250,y:250,s:.9},{x:120,y:330,s:1}],kartoteka:[{x:228,y:440,s:.8},{x:476,y:430,s:.6}],
+const EYES={korytarz:[{x:700,y:190,s:1.1},{x:600,y:120,s:.9},{x:860,y:230,s:.8},{x:1000,y:110,s:1},{x:720,y:300,s:.7}],izba:[{x:1250,y:250,s:.9},{x:120,y:330,s:1}],kartoteka:[{x:228,y:440,s:.8}],
  sala:[{x:150,y:700,s:1},{x:1500,y:620,s:.9}],izolatka:[{x:1000,y:160,s:1},{x:1480,y:430,s:.8}],operacyjna:[{x:690,y:230,s:.8}],pracownia:[{x:405,y:250,s:.9},{x:120,y:140,s:1}],
  maszynownia:[{x:640,y:420,s:.8},{x:300,y:200,s:1}],swietlica:[{x:775,y:495,s:.6},{x:1450,y:200,s:.9}],pokoj:[{x:1125,y:500,s:.8},{x:420,y:500,s:.8}]};
 let eyeNext=performance.now()+12000,eyeOn=null;
@@ -315,6 +315,24 @@ function drawEyes(now){const list=EYES[S.view];if(!list)return;const fast=S.view
  eyeOn.set.forEach((e,k)=>{const ex=e.x*K,ey=e.y*K,s=e.s*K*1.25,blink=((t+k*400)%1700)<130?.12:1,a=fade;
    [-1,1].forEach(side=>{const cx=ex+side*15*s,gr=g.createRadialGradient(cx,ey,1,cx,ey,16*s);gr.addColorStop(0,'rgba(255,240,200,'+(.55*a)+')');gr.addColorStop(1,'rgba(255,200,120,0)');g.fillStyle=gr;g.beginPath();g.arc(cx,ey,16*s,0,7);g.fill();
      g.fillStyle='rgba(255,248,225,'+(.95*a)+')';g.beginPath();g.ellipse(cx,ey,6.5*s,3.6*s*blink,0,0,7);g.fill();g.fillStyle='rgba(20,10,5,'+(.9*a)+')';g.beginPath();g.ellipse(cx+Math.sin(now/900)*1.2*s,ey,1.3*s,3*s*blink,0,0,7);g.fill()})})}
+
+/* ---- postać z dziury w suficie Kartoteki ---- */
+const HOLES=[{x:955,y:108},{x:690,y:100}];let hangNext=performance.now()+9000,hang=null,HANGIMG=null;
+function hangSprite(){if(HANGIMG)return HANGIMG;const src=SCIMG[0];if(!okImg(src))return null;const c=mkCanvas(340,400),x=c.getContext('2d');x.drawImage(src,270,140,340,400,0,0,340,400);
+ const d=x.getImageData(0,0,340,400),p=d.data;for(let i=0;i<p.length;i+=4){const L=(p[i]+p[i+1]+p[i+2])/3;p[i]=L*.8;p[i+1]=L*.85;p[i+2]=L*.9}x.putImageData(d,0,0);
+ x.globalCompositeOperation='destination-in';const gr=x.createRadialGradient(170,190,40,170,200,190);gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(.6,'rgba(0,0,0,.85)');gr.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=gr;x.fillRect(0,0,340,400);
+ x.globalCompositeOperation='source-over';HANGIMG=c;return c}
+function drawHanger(now){if(S.view!=='kartoteka'){hangNext=Math.max(hangNext,now+6000);hang=null;return}const img=hangSprite();if(!img)return;
+ if(!hang&&now>hangNext&&$('#modal').hidden){hang={t0:now,h:pick(HOLES),dur:R(2600,4200),fled:0};AU.creak()}
+ if(!hang)return;const t=now-hang.t0,hx=hang.h.x*K,hy=hang.h.y*K,size=150*K;
+ if(!hang.fled&&Math.hypot(hx-LX,hy+size*.5-LY)<120){hang.fled=now;AU.whisper()}
+ let p;const up=hang.fled?Math.max(0,1-(now-hang.fled)/220):1;
+ if(t<700)p=t/700;else if(t<hang.dur)p=1+Math.sin(t/300)*.03;else p=Math.max(0,1-(t-hang.dur)/900);p*=up;
+ if((t>hang.dur+900)||(hang.fled&&now-hang.fled>240)){hang=null;hangNext=now+R(15000,35000);return}
+ const drop=-size*.95+p*size*1.25;g.save();g.globalCompositeOperation='source-over';g.beginPath();g.rect(hx-size*.7,hy,size*1.4,size*2);g.clip();
+ g.translate(hx,hy+drop);g.rotate(Math.PI+Math.sin(now/700)*.05);g.globalAlpha=.8;g.drawImage(img,-size*.42,-size*.5,size*.84,size);
+ g.globalAlpha=.55;g.fillStyle='#050505';for(let i=0;i<26;i++){const ox=(hash(i,1,9)-.5)*size*.8;g.fillRect(ox,-size*.5-hash(i,2,9)*size*.9,1.5,size*.9)}
+ g.restore();g.globalAlpha=1;g.globalCompositeOperation='screen'}
 
 /* ================= RENDER ================= */
 let LX=CW*.5,LY=CH_*.55,TX=LX,TY=LY,flick=1,lastF=0;
@@ -332,7 +350,7 @@ function frame(){const now=performance.now();if(now-lastF<33||document.hidden){r
   if(S.sel==='uv'){const ug=lm.createRadialGradient(LX,LY,4,LX,LY,R1*.8);ug.addColorStop(0,'rgba(120,60,255,.55)');ug.addColorStop(1,'rgba(0,0,0,0)');lm.fillStyle=ug;lm.fillRect(0,0,CW,CH_)}
   g.globalCompositeOperation='source-over';g.drawImage(BASE,0,0);g.globalCompositeOperation='multiply';g.drawImage(LM,0,0);g.globalCompositeOperation='screen';
   dust.forEach(d=>{d.y-=d.v;d.x+=Math.sin(now/1500+d.r*9)*.2;if(d.y<0){d.y=CH_;d.x=Math.random()*CW}const dd=Math.hypot(d.x-LX,d.y-LY);if(dd<R1){g.fillStyle='rgba(240,235,220,'+(.5*(1-dd/R1))+')';g.beginPath();g.arc(d.x,d.y,d.r,0,7);g.fill()}});
-  drawEyes(now);
+  drawEyes(now);drawHanger(now);
   vw.spots.forEach((sp,i)=>{if(S.done[sp.id]&&!sp.f)return;if(sp.need&&!sp.need())return;const minor=!!sp.f;
     const cx=(sp.x+sp.w/2)*K,cy=(sp.y+sp.h/2)*K,dd=Math.hypot(cx-LX,cy-LY),near=Math.max(0,1-dd/220),pulse=.5+.5*Math.sin(now/650+i*1.7);
     const fr=cl(Math.max(sp.w,sp.h)*K*.5,32,90)*(minor?.7:1),fa=(minor?.025:.045)+.025*pulse+.07*near;
