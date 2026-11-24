@@ -204,7 +204,7 @@ const AU={ctx:null,cur:null,evT:null,
   const ns=c.createBufferSource();ns.buffer=this.noise;ns.loop=true;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=380;bp.Q.value=.5;const wg=c.createGain();wg.gain.value=.025;ns.connect(bp);bp.connect(wg);wg.connect(g1);ns.start();os.push(ns);
   this.cur={g:g1,o:os};clearTimeout(this.evT);const loop=()=>{this.event();this.evT=setTimeout(loop,3500+Math.random()*7000)};this.evT=setTimeout(loop,4000)},
  setHum(on){if(this.hum)this.hum.gain.setTargetAtTime(on?.006:0,this.ctx.currentTime,.3)},
- event(){const r=Math.random();if(r<.08&&S.name){whisperName();return}if(r<.18){countAloud();return}if(r<.3)this.drip();else if(r<.52)this.steps();else if(r<.72)this.whisper();else if(r<.88)this.creak();else this.bell()},
+ event(){const r=Math.random();if(r<.10){countAloud();return}if(r<.3)this.drip();else if(r<.52)this.steps();else if(r<.72)this.whisper();else if(r<.88)this.creak();else this.bell()},
  env(node,t,a,peak,d){const gg=this.ctx.createGain();gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(peak,t+a);gg.gain.exponentialRampToValueAtTime(.0005,t+a+d);node.connect(gg);return gg},
  pan(node,v){if(this.ctx.createStereoPanner){const p=this.ctx.createStereoPanner();p.pan.value=v;node.connect(p);return p}return node},
  drip(){if(!this.ctx)return;const c=this.ctx,t=c.currentTime,o=c.createOscillator();o.frequency.setValueAtTime(1800+Math.random()*900,t);o.frequency.exponentialRampToValueAtTime(500,t+.08);const gg=this.env(o,t,.002,.08,.15);this.pan(gg,Math.random()*2-1).connect(this.rev);o.start(t);o.stop(t+.3)},
@@ -232,15 +232,18 @@ function countAloud(force){try{if(!S.sound||!('speechSynthesis' in window))retur
   const a=R(1,9),n=R(4,8),words=[];for(let i=0;i<n&&a+i<=20;i++)words.push(NUMW[a+i]);
   const u=new SpeechSynthesisUtterance(words.join('… ')+'…');u.lang='pl-PL';u.rate=.55;u.pitch=.05;u.volume=.32;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
 let whispering=false;
-function whisperName(force,nameOverride){try{const nm=nameOverride||S.name;if(!nm||!('speechSynthesis' in window))return;if(!force&&(!S.sound||whispering||speechSynthesis.speaking||!$('#cover').hidden||!$('#filmWrap').hidden))return;
+function whisperName(force,nameOverride){try{const nm=nameOverride||S.name;if(!nm||!('speechSynthesis' in window))return false;if(!force&&(!S.sound||whispering||speechSynthesis.speaking||!$('#cover').hidden||!$('#filmWrap').hidden||!$('#modal').hidden||!$('#story').hidden))return false;
   whispering=true;const vs=speechSynthesis.getVoices().filter(v=>/^pl/i.test(v.lang));
-  let voice=vs.find(v=>/zosia/i.test(v.name)),rate=.45,vols=[.35,.28,.22];
-  if(!voice){voice=vs.find(v=>/google/i.test(v.name));if(voice){rate=.6;vols=[.22,.18,.14]}}
+  let voice=vs.find(v=>/zosia/i.test(v.name)),rate=.45,vol=.18;
+  if(!voice){voice=vs.find(v=>/google/i.test(v.name));if(voice){rate=.6;vol=.12}}
   if(!voice)voice=vs[0];
-  const tails=['chodź…','uważaj…','za tobą…'].sort(()=>Math.random()-.5);let i=0;
-  const say=()=>{if(i>=3){whispering=false;return}const u=new SpeechSynthesisUtterance('Ej, '+nm+', '+tails[i]);u.lang='pl-PL';u.rate=rate*(i===2?.85:1);u.pitch=1;u.volume=vols[i];if(voice)u.voice=voice;i++;
-    let d=false;const f=()=>{if(d)return;d=true;setTimeout(say,2000)};u.onend=f;u.onerror=f;setTimeout(f,9000);speechSynthesis.speak(u)};
-  say()}catch(e){whispering=false}}
+  const tails=['','chodź…','uważaj…','za tobą…'],tl=tails[Math.floor(Math.random()*tails.length)];const u=new SpeechSynthesisUtterance(tl?'Ej, '+nm+', '+tl:'Ej, '+nm+'…');u.lang='pl-PL';u.rate=rate;u.pitch=1;u.volume=vol;if(voice)u.voice=voice;
+  const f=()=>{whispering=false};u.onend=f;u.onerror=f;setTimeout(f,8000);speechSynthesis.speak(u);return true}catch(e){whispering=false;return false}}
+/* szept raz na 10 minut gry */
+const WHISPER_TEST=(()=>{const m=location.search.match(/szept=(\d+)/);return m?(+m[1])*1000:0})();
+const nextWhisperGap=()=>WHISPER_TEST||(180000+Math.random()*420000);
+setInterval(()=>{try{if(!S||!S.name||!S.stats||S.finished)return;if(S.nextW==null||WHISPER_TEST&&S.nextW-S.stats.play>WHISPER_TEST){S.nextW=S.stats.play+nextWhisperGap();return}if(S.stats.play>=S.nextW&&whisperName()){S.nextW=S.stats.play+nextWhisperGap();save()}}catch(e){}},5000);
+function unlockSpeech(){try{if(!('speechSynthesis' in window)||unlockSpeech.done)return;unlockSpeech.done=1;const u=new SpeechSynthesisUtterance(' ');u.volume=0;u.lang='pl-PL';speechSynthesis.speak(u);speechSynthesis.getVoices()}catch(e){}}
 function speak(text){try{if(!('speechSynthesis' in window))return false;const u=new SpeechSynthesisUtterance(text);u.lang='pl-PL';u.rate=.72;u.pitch=.2;u.volume=.9;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(e){return false}}
 
 /* ================= JUMP SCARE (zdjęcia, bez opóźnienia) ================= */
@@ -422,7 +425,7 @@ function closePaper(){modal.hidden=true;setTimeout(showNotice,150);AU.heart(fals
 modal.addEventListener('click',e=>{if(e.target===modal&&!timedRun&&!paper.classList.contains('notice'))closePaper()});
 let toastT;function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),4200)}
 function closeRow(p,label){const r=el('div','row');const c=btn(label||'Zamknij','sec');c.onclick=closePaper;r.append(c);p.append(r);return r}
-function wrong(p){S.stats.wrong++;if(S.name&&Math.random()<.22)setTimeout(whisperName,1400);if(p){p.classList.remove('shake');void p.offsetWidth;p.classList.add('shake')}maybeScare();if(!scareRun)AU.sting()}
+function wrong(p){S.stats.wrong++;if(p){p.classList.remove('shake');void p.offsetWidth;p.classList.add('shake')}maybeScare();if(!scareRun)AU.sting()}
 function drawInv(){const inv=$('#inv');inv.innerHTML='';if(S.sel&&!S.inv.includes(S.sel))S.sel=null;
  S.inv.forEach(it=>{const d=ITEMS[it];const b=el('button','slot'+(S.sel===it?' sel':''));b.type='button';b.innerHTML=d.i+'<small>'+d.n.split(' ')[0]+'</small>';
   b.onclick=()=>{AU.init();if(S.sel===it){S.sel=null;save();drawInv();toast('Odłożono: '+d.n+'.')}else{S.sel=it;save();drawInv();toast('Trzymasz: '+d.n+'. Stuknij miejsce w pokoju, by go użyć.')}};inv.append(b)});
@@ -779,8 +782,8 @@ function askName(cb){const p=openPaper();p.append(el('h2',null,'Zanim wejdziesz�
  const fb=el('div','fb');const r=el('div','row');const ok=btn('Wchodzę','red');r.append(ok);p.append(inp,r,fb);
  const go=()=>{const n=inp.value.trim().replace(/[<>]/g,'');if(n.length<2){fb.className='fb no';fb.textContent='Wpisz swoje imię.';return}S.name=n.charAt(0).toUpperCase()+n.slice(1);save();closePaper();cb()};ok.onclick=go;inp.addEventListener('keydown',e=>{if(e.key==='Enter')go()});setTimeout(()=>{try{inp.focus()}catch(e){}},100)}
 
-$('#bGo').onclick=()=>{AU.init();if(AU.ctx){AU.ctx.resume().catch(()=>{});AU.ambient(CHAPTERS[S.ch].root)}$('#cover').hidden=true;if(S.finished){const sc=S.scare,so=S.sound;S=newState();S.scare=sc;S.sound=so;save();drawInv();loadChapter(1).then(()=>setView('izba'))}
- const startIntro=()=>{if(!S.seen['intro'+S.ch]){S.seen['intro'+S.ch]=1;save();story('Rozdział '+['','I','II','III','IV','V'][S.ch],CHAPTERS[S.ch].name,CHAPTERS[S.ch].intro,()=>{setTimeout(whisperName,9000)})}else setTimeout(whisperName,12000)};
+$('#bGo').onclick=()=>{AU.init();unlockSpeech();if(AU.ctx){AU.ctx.resume().catch(()=>{});AU.ambient(CHAPTERS[S.ch].root)}$('#cover').hidden=true;if(S.finished){const sc=S.scare,so=S.sound;S=newState();S.scare=sc;S.sound=so;save();drawInv();loadChapter(1).then(()=>setView('izba'))}
+ const startIntro=()=>{if(!S.seen['intro'+S.ch]){S.seen['intro'+S.ch]=1;save();story('Rozdział '+['','I','II','III','IV','V'][S.ch],CHAPTERS[S.ch].name,CHAPTERS[S.ch].intro,()=>{})}};
  if(!S.name)askName(startIntro);else startIntro()};
 drawInv();
 loadChapter(S.ch).then(()=>{setView(CHAPTERS[S.ch].views.includes(S.view)?S.view:CHAPTERS[S.ch].views[0]);requestAnimationFrame(frame)}).catch(e=>{$('#err').hidden=false;$('#err').textContent=e.message});

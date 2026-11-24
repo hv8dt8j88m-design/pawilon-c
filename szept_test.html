@@ -237,11 +237,11 @@ function whisperName(force,nameOverride){try{const nm=nameOverride||S.name;if(!n
   let voice=vs.find(v=>/zosia/i.test(v.name)),rate=.45,vol=.18;
   if(!voice){voice=vs.find(v=>/google/i.test(v.name));if(voice){rate=.6;vol=.12}}
   if(!voice)voice=vs[0];
-  const u=new SpeechSynthesisUtterance('Ej, '+nm+'…');u.lang='pl-PL';u.rate=rate;u.pitch=1;u.volume=vol;if(voice)u.voice=voice;
+  const tails=['','chodź…','uważaj…','za tobą…'],tl=tails[Math.floor(Math.random()*tails.length)];const u=new SpeechSynthesisUtterance(tl?'Ej, '+nm+', '+tl:'Ej, '+nm+'…');u.lang='pl-PL';u.rate=rate;u.pitch=1;u.volume=vol;if(voice)u.voice=voice;
   const f=()=>{whispering=false};u.onend=f;u.onerror=f;setTimeout(f,8000);speechSynthesis.speak(u);return true}catch(e){whispering=false;return false}}
 /* szept raz na 10 minut gry */
 const WHISPER_TEST=(()=>{const m=location.search.match(/szept=(\d+)/);return m?(+m[1])*1000:0})();
-const nextWhisperGap=()=>WHISPER_TEST||(300000+Math.random()*300000);
+const nextWhisperGap=()=>WHISPER_TEST||(180000+Math.random()*420000);
 setInterval(()=>{try{if(!S||!S.name||!S.stats||S.finished)return;if(S.nextW==null||WHISPER_TEST&&S.nextW-S.stats.play>WHISPER_TEST){S.nextW=S.stats.play+nextWhisperGap();return}if(S.stats.play>=S.nextW&&whisperName()){S.nextW=S.stats.play+nextWhisperGap();save()}}catch(e){}},5000);
 function unlockSpeech(){try{if(!('speechSynthesis' in window)||unlockSpeech.done)return;unlockSpeech.done=1;const u=new SpeechSynthesisUtterance(' ');u.volume=0;u.lang='pl-PL';speechSynthesis.speak(u);speechSynthesis.getVoices()}catch(e){}}
 function speak(text){try{if(!('speechSynthesis' in window))return false;const u=new SpeechSynthesisUtterance(text);u.lang='pl-PL';u.rate=.72;u.pitch=.2;u.volume=.9;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(e){return false}}
