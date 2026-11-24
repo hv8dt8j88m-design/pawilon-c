@@ -81,6 +81,27 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
 #toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);z-index:25;background:rgba(8,8,8,.88);border:1px solid rgba(200,195,180,.3);padding:10px 16px;font-size:17px;color:#e3ddcc;max-width:90vw;text-align:center;opacity:0;transition:opacity .5s;pointer-events:none}
 #toast.on{opacity:1}
 .jr .e{border-bottom:1px dashed rgba(29,31,28,.35);padding:6px 0;font-size:16px}
+#filmWrap{position:fixed;inset:0;z-index:36;background:#000}
+#filmWrap[hidden]{display:none}
+#film{position:absolute;inset:0;width:100%;height:100%}
+#cap{position:absolute;left:50%;bottom:12%;transform:translateX(-50%);width:min(820px,90vw);text-align:center;font-family:var(--f);font-size:clamp(18px,2.8vw,28px);line-height:1.5;color:#f3e7cf;text-shadow:0 0 18px rgba(0,0,0,.9),0 2px 4px #000;opacity:0;transition:opacity 1.2s}
+#cap.on{opacity:1}
+#skip{position:absolute;right:16px;top:max(14px,env(safe-area-inset-top));background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.35);color:#ddd;padding:6px 12px;font-family:var(--o);letter-spacing:.1em}
+#cert{position:fixed;inset:0;z-index:37;display:grid;place-items:center;padding:16px;background:radial-gradient(ellipse at center,rgba(255,236,200,.25),rgba(0,0,0,.85));overflow:auto}
+#cert[hidden]{display:none}
+.cbox{position:relative;width:min(640px,100%);background:#efe4c8;color:#2a2214;padding:26px 26px 20px;text-align:center;border:10px double #8a6a2c;box-shadow:0 30px 80px #000;animation:certIn 1.4s ease-out}
+@keyframes certIn{from{transform:scale(.85) rotate(-2deg);opacity:0}to{transform:none;opacity:1}}
+.cbox::before{content:"";position:absolute;inset:0;background-image:var(--noise);opacity:.35;mix-blend-mode:multiply;pointer-events:none}
+.cbox>*{position:relative}
+.cbox .k{font-family:var(--o);letter-spacing:.35em;font-size:14px;color:#6a5430}
+.cbox h2{font-family:var(--o);font-size:clamp(30px,6vw,46px);letter-spacing:.12em;margin:4px 0;color:#3a2a10}
+.cbox .nm{font-family:var(--h);font-size:clamp(38px,7vw,58px);color:#5a1a10;margin:6px 0}
+.cbox img{width:120px;height:150px;object-fit:cover;border:4px solid #8a6a2c;float:right;margin:0 0 8px 12px;filter:sepia(.4)}
+.cbox .st{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:14px 0;text-align:left;clear:both}
+.cbox .st div{background:rgba(255,255,255,.35);border:1px solid rgba(90,70,30,.35);padding:8px 10px;font-size:15px}
+.cbox .st b{display:block;font-family:var(--o);font-size:24px;color:#3a2a10}
+.cbox .rank{font-family:var(--o);letter-spacing:.15em;color:#8a1a1a;font-size:20px;margin:8px 0}
+.cbox .sig{font-family:var(--h);font-size:26px;color:#3a2a10;text-align:right;margin-top:6px}
 #err{position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#400;color:#fcc;padding:8px;font:14px system-ui}
 #err[hidden]{display:none}
 #load{position:fixed;left:50%;top:60%;transform:translateX(-50%);z-index:31;color:#8f897c;font-family:var(--o);letter-spacing:.2em;font-size:14px}
@@ -106,6 +127,8 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
   </div>
 </div>
 <div id="load">WCZYTYWANIE…</div>
+<div id="filmWrap" hidden><canvas id="film"></canvas><div id="cap"></div><button id="skip" type="button">Pomiń ▶▶</button></div>
+<div id="cert" hidden><div class="cbox" id="certBox"></div></div>
 <div id="toast"></div>
 <div id="err" hidden></div>
 <script>window.onerror=function(m,s,l){var e=document.getElementById('err');e.hidden=false;e.textContent='Błąd: '+m+' (linia '+l+')'};</script>
@@ -151,9 +174,10 @@ const GENS={1:gen1,2:gen2,3:gen3,4:gen4,5:gen5};
 
 /* ================= STAN ================= */
 const SKEY='pawilon-c-v2';
-function newState(){return {ch:1,view:'izba',sel:null,inv:[],done:{},notes:[],flags:{},scare:2,sound:true,seen:{},v:{1:gen1()}}}
+function newState(){return {name:'',stats:{wrong:0,scares:0,play:0},ch:1,view:'izba',sel:null,inv:[],done:{},notes:[],flags:{},scare:2,sound:true,seen:{},v:{1:gen1()}}}
 let S=newState();
 try{const r=JSON.parse(localStorage.getItem(SKEY)||'null');if(r&&r.v&&r.ch)S=Object.assign(newState(),r)}catch(e){}
+if(!S.stats)S.stats={wrong:0,scares:0,play:0};
 const V=()=>S.v[S.ch];
 function save(){try{localStorage.setItem(SKEY,JSON.stringify(S))}catch(e){}}
 function addNote(t){if(!S.notes.includes(t)){S.notes.push(t);save()}}
@@ -179,7 +203,7 @@ const AU={ctx:null,cur:null,evT:null,
   const ns=c.createBufferSource();ns.buffer=this.noise;ns.loop=true;const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=380;bp.Q.value=.5;const wg=c.createGain();wg.gain.value=.025;ns.connect(bp);bp.connect(wg);wg.connect(g1);ns.start();os.push(ns);
   this.cur={g:g1,o:os};clearTimeout(this.evT);const loop=()=>{this.event();this.evT=setTimeout(loop,3500+Math.random()*7000)};this.evT=setTimeout(loop,4000)},
  setHum(on){if(this.hum)this.hum.gain.setTargetAtTime(on?.006:0,this.ctx.currentTime,.3)},
- event(){const r=Math.random();if(r<.12){countAloud();return}if(r<.3)this.drip();else if(r<.52)this.steps();else if(r<.72)this.whisper();else if(r<.88)this.creak();else this.bell()},
+ event(){const r=Math.random();if(r<.08&&S.name){whisperName();return}if(r<.18){countAloud();return}if(r<.3)this.drip();else if(r<.52)this.steps();else if(r<.72)this.whisper();else if(r<.88)this.creak();else this.bell()},
  env(node,t,a,peak,d){const gg=this.ctx.createGain();gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(peak,t+a);gg.gain.exponentialRampToValueAtTime(.0005,t+a+d);node.connect(gg);return gg},
  pan(node,v){if(this.ctx.createStereoPanner){const p=this.ctx.createStereoPanner();p.pan.value=v;node.connect(p);return p}return node},
  drip(){if(!this.ctx)return;const c=this.ctx,t=c.currentTime,o=c.createOscillator();o.frequency.setValueAtTime(1800+Math.random()*900,t);o.frequency.exponentialRampToValueAtTime(500,t+.08);const gg=this.env(o,t,.002,.08,.15);this.pan(gg,Math.random()*2-1).connect(this.rev);o.start(t);o.stop(t+.3)},
@@ -206,6 +230,8 @@ const NUMW=['zero','jeden','dwa','trzy','cztery','pięć','sześć','siedem','os
 function countAloud(force){try{if(!S.sound||!('speechSynthesis' in window))return;if(!force&&(speechSynthesis.speaking||!$('#modal').hidden||!$('#story').hidden||!$('#cover').hidden))return;
   const a=R(1,9),n=R(4,8),words=[];for(let i=0;i<n&&a+i<=20;i++)words.push(NUMW[a+i]);
   const u=new SpeechSynthesisUtterance(words.join('… ')+'…');u.lang='pl-PL';u.rate=.55;u.pitch=.05;u.volume=.32;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
+function whisperName(){try{if(!S.name||!S.sound||!('speechSynthesis' in window))return;if(speechSynthesis.speaking||!$('#cover').hidden||!$('#filmWrap').hidden)return;AU.whisper();
+  const u=new SpeechSynthesisUtterance(S.name+'… '+S.name+'…');u.lang='pl-PL';u.rate=.42;u.pitch=.01;u.volume=.55;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;setTimeout(()=>speechSynthesis.speak(u),350)}catch(e){}}
 function speak(text){try{if(!('speechSynthesis' in window))return false;const u=new SpeechSynthesisUtterance(text);u.lang='pl-PL';u.rate=.72;u.pitch=.2;u.volume=.9;const v=speechSynthesis.getVoices().find(v=>/pl/i.test(v.lang));if(v)u.voice=v;speechSynthesis.cancel();speechSynthesis.speak(u);return true}catch(e){return false}}
 
 /* ================= JUMP SCARE (zdjęcia, bez opóźnienia) ================= */
@@ -215,7 +241,7 @@ const okImg=i=>i.complete&&i.naturalWidth>0;
 let lastScare=0,lastWasScare=false,scareRun=false,lastScareImg=-1;
 function maybeScare(){if(S.scare===0||scareRun)return;const now=Date.now();if(lastWasScare||now-lastScare<15000){lastWasScare=false;return}
   const p=S.scare===2?.55:.3;if(Math.random()<p){lastWasScare=true;lastScare=now;jump(pick(S.scare===2?['face','face','face','dark','figure']:['dark','figure','face']))}else lastWasScare=false}
-function jump(type){if(scareRun||S.scare===0)return;scareRun=true;AU.init();if(AU.ctx&&AU.ctx.state!=='running')AU.ctx.resume().catch(()=>{});
+function jump(type){if(scareRun||S.scare===0)return;scareRun=true;S.stats.scares++;AU.init();if(AU.ctx&&AU.ctx.state!=='running')AU.ctx.resume().catch(()=>{});
  const dpr=Math.min(2,window.devicePixelRatio||1),W=scv.width=Math.round(innerWidth*dpr),H=scv.height=Math.round(innerHeight*dpr);
  const good=SCIMG.map((im,k)=>k).filter(k=>okImg(SCIMG[k])&&k!==lastScareImg);let idx=good.length?pick(good):lastScareImg;if(type==='figure'&&okImg(SCIMG[3]))idx=3;if(idx<0)idx=0;lastScareImg=idx;const img=SCIMG[idx];
  const pw=S.scare===2?1:.6,t0=performance.now(),delay=type==='dark'?650:0,dur=delay+(S.scare===2?800:560);let fired=false;
@@ -343,7 +369,7 @@ function drawHanger(now){if(S.view!=='kartoteka'){hangNext=Math.max(hangNext,now
 let LX=CW*.5,LY=CH_*.55,TX=LX,TY=LY,flick=1,lastF=0;
 const LM=mkCanvas(CW,CH_),lm=LM.getContext('2d'),BASE=mkCanvas(CW,CH_),bx=BASE.getContext('2d');
 const dust=[...Array(70)].map(()=>({x:Math.random()*CW,y:Math.random()*CH_,v:.1+Math.random()*.3,r:.5+Math.random()*1.4}));
-function frame(){const now=performance.now();if(now-lastF<33||document.hidden){requestAnimationFrame(frame);return}lastF=now;LX+=(TX-LX)*.22;LY+=(TY-LY)*.22;
+let lastSaveT=0;function frame(){const now=performance.now();if(now-lastF<33||document.hidden){requestAnimationFrame(frame);return}if($('#cover').hidden&&lastF&&now-lastF<1000)S.stats.play+=now-lastF;if(now-lastSaveT>10000){lastSaveT=now;save()}lastF=now;LX+=(TX-LX)*.22;LY+=(TY-LY)*.22;
   const vw=VIEWS[S.view],D=DATA[S.view];if(!D||!CHAPTERS[S.ch].views.includes(S.view)||!V()){requestAnimationFrame(frame);return}
   flick=.9+.1*vn(now/220,0,3)+(Math.random()<.004?-.5:0);
   bx.drawImage(D.base,0,0);try{overlays(S.view,bx)}catch(e){bx.restore()}
@@ -387,7 +413,7 @@ function closePaper(){modal.hidden=true;setTimeout(showNotice,150);AU.heart(fals
 modal.addEventListener('click',e=>{if(e.target===modal&&!timedRun&&!paper.classList.contains('notice'))closePaper()});
 let toastT;function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),4200)}
 function closeRow(p,label){const r=el('div','row');const c=btn(label||'Zamknij','sec');c.onclick=closePaper;r.append(c);p.append(r);return r}
-function wrong(p){if(p){p.classList.remove('shake');void p.offsetWidth;p.classList.add('shake')}maybeScare();if(!scareRun)AU.sting()}
+function wrong(p){S.stats.wrong++;if(S.name&&Math.random()<.22)setTimeout(whisperName,1400);if(p){p.classList.remove('shake');void p.offsetWidth;p.classList.add('shake')}maybeScare();if(!scareRun)AU.sting()}
 function drawInv(){const inv=$('#inv');inv.innerHTML='';if(S.sel&&!S.inv.includes(S.sel))S.sel=null;
  S.inv.forEach(it=>{const d=ITEMS[it];const b=el('button','slot'+(S.sel===it?' sel':''));b.type='button';b.innerHTML=d.i+'<small>'+d.n.split(' ')[0]+'</small>';
   b.onclick=()=>{AU.init();if(S.sel===it){S.sel=null;save();drawInv();toast('Odłożono: '+d.n+'.')}else{S.sel=it;save();drawInv();toast('Trzymasz: '+d.n+'. Stuknij miejsce w pokoju, by go użyć.')}};inv.append(b)});
@@ -643,10 +669,53 @@ function tapePuzzle(){const v=V();if(S.done.c3_tape){showNote('Magnetofon',NOTE3
  numPuzzle({title:'Magnetofon',intro:'Szpulowy magnetofon z licznikiem. Do której pozycji przewinąć taśmę?',q:()=>({q:'x : 3 + 4 = '+v.q,a:v.x}),ask:'Pozycja licznika (x):',hint:'Odejmij 4 od obu stron, potem pomnóż przez 3.',
   ok:()=>{S.done.c3_tape=1;save();AU.radio(true);setTimeout(()=>AU.radio(false),5000);const t='Bęben razy kąt. Cztery cyfry. Od końca. Pamiętaj… od końca.';speak(t);addNote('Taśma: „'+t+'”');showNote('Głos z taśmy','„'+t+'”')}})}
 
+/* ================= ZAKOŃCZENIE FILMOWE ================= */
+function endMusic(){if(!AU.ctx)return;const c=AU.ctx,t=c.currentTime;if(AU.cur)AU.cur.g.gain.setTargetAtTime(0,t,1.5);clearTimeout(AU.evT);AU.motor(false);AU.hiss(false);AU.setHum(false);
+ const g1=c.createGain();g1.gain.value=0;g1.gain.setTargetAtTime(.09,t,4);g1.connect(AU.rev);g1.connect(AU.dry);
+ [[130.8,'triangle'],[196,'triangle'],[261.6,'sine'],[329.6,'sine'],[392,'sine'],[587.3,'sine']].forEach(([f,ty],i)=>{const o=c.createOscillator(),gg=c.createGain();o.type=ty;o.frequency.value=f;gg.gain.value=i<2?.5:.25;
+  const l=c.createOscillator(),lg=c.createGain();l.frequency.value=.15+i*.05;lg.gain.value=f*.004;l.connect(lg);lg.connect(o.frequency);l.start();o.connect(gg);gg.connect(g1);o.start();o.stop(t+60);l.stop(t+60)});
+ const mel=[659,784,880,784,659,587,523,587,659,784,1047,988,880,784];mel.forEach((f,i)=>setTimeout(()=>AU.bell(f),9000+i*700));AU.endG=g1}
+function playFilm(){AU.init();const W0=$('#filmWrap');W0.hidden=false;const fc=$('#film'),fx=fc.getContext('2d'),cap=$('#cap');
+ const dpr=Math.min(1.5,window.devicePixelRatio||1);const W=fc.width=Math.round(innerWidth*dpr),Hh=fc.height=Math.round(innerHeight*dpr);
+ let bg=null,prof=null,parts=null,done=false;loadImg('swietlica').then(i=>bg=i).catch(()=>{});const pi=new Image();pi.onload=()=>{prof=pi;buildParts()};pi.src='profesor.jpg';
+ const name=S.name||'nieznajomy';
+ const caps=[[3000,'Zamek puszcza. Drzwi otwierają się same.'],[8500,'Na końcu sali, w snopie światła, ktoś stoi.'],[13000,'„Dziękuję, '+name+'.”'],[17500,'„Nikt nie wierzył, że liczby prowadzą do drzwi. Ty je otworzyłeś – wszystkie.”'],[23000,'„Teraz mogę wreszcie odejść.”'],[28500,'Profesor Aleksander Wolański jest wolny. Pawilon C po raz pierwszy od lat milczy.']];
+ caps.forEach(([t,tx],i)=>setTimeout(()=>{if(done)return;cap.classList.remove('on');setTimeout(()=>{cap.textContent=tx;cap.classList.add('on')},500);if(i===2)speak('Dziękuję, '+name+'.')},t));
+ AU.bang();setTimeout(()=>AU.creak(),600);setTimeout(()=>{AU.creak();AU.steps()},2200);setTimeout(endMusic,6000);
+ const ph=Hh*.62,pw=ph*700/898,px=W/2-pw/2,py=Hh*.12;
+ function buildParts(){const c=mkCanvas(140,180),x=c.getContext('2d');x.drawImage(prof,0,0,140,180);const d=x.getImageData(0,0,140,180).data;parts=[];
+  for(let y=0;y<180;y+=2)for(let xx=0;xx<140;xx+=2){const k=(y*140+xx)*4,L=(d[k]+d[k+1]+d[k+2])/3;if(L<38)continue;parts.push({x:px+xx/140*pw,y:py+y/180*ph,c:'rgb('+d[k]+','+d[k+1]+','+d[k+2]+')',vx:(Math.random()-.5)*.6*dpr,vy:-(.4+Math.random()*1.6)*dpr,d:Math.random()*2600+(1-y/180)*900,s:(1+Math.random()*1.6)*dpr})}}
+ const t0=performance.now();let lastP=t0;
+ const fr=()=>{if(done)return;const now=performance.now(),t=now-t0,dt=Math.min(50,now-lastP);lastP=now;fx.globalCompositeOperation='source-over';fx.fillStyle='#000';fx.fillRect(0,0,W,Hh);
+  if(bg){const z=1+t/60000,bw=Math.max(W,Hh*1600/1067)*z,bh=bw*1067/1600,bx=(W-bw)/2,by=(Hh-bh)/2;const dawn=cl((t-26000)/5000,0,1),vis=cl((t-2500)/5000,0,1);
+   fx.globalAlpha=vis;fx.drawImage(bg,bx,by,bw,bh);fx.globalAlpha=1;fx.fillStyle='rgba(8,12,28,'+(.78*(1-dawn))+')';fx.fillRect(0,0,W,Hh);
+   if(dawn>0){fx.globalCompositeOperation='soft-light';fx.fillStyle='rgba(255,200,120,'+(.6*dawn)+')';fx.fillRect(0,0,W,Hh);fx.globalCompositeOperation='source-over'}}
+  const L=cl((t-7000)/8000,0,1)*(1-cl((t-30000)/4000,0,.6));if(L>0){fx.globalCompositeOperation='lighter';const cx=W/2,cy=Hh*.45,gr=fx.createRadialGradient(cx,cy,10,cx,cy,Math.max(W,Hh)*.7);gr.addColorStop(0,'rgba(255,230,180,'+(.55*L)+')');gr.addColorStop(.3,'rgba(255,200,130,'+(.22*L)+')');gr.addColorStop(1,'rgba(0,0,0,0)');fx.fillStyle=gr;fx.fillRect(0,0,W,Hh);
+   for(let i=0;i<9;i++){const a=i/9*Math.PI*2+t/9000,len=Math.max(W,Hh);fx.fillStyle='rgba(255,225,170,'+(.05*L)+')';fx.beginPath();fx.moveTo(cx,cy);fx.lineTo(cx+Math.cos(a-.05)*len,cy+Math.sin(a-.05)*len);fx.lineTo(cx+Math.cos(a+.05)*len,cy+Math.sin(a+.05)*len);fx.closePath();fx.fill()}fx.globalCompositeOperation='source-over'}
+  if(prof){const fin=cl((t-11000)/3500,0,1),diss=cl((t-21000)/1500,0,1),a=fin*(1-diss);const fl=Math.sin(t/900)*6*dpr;
+   if(a>0){fx.globalCompositeOperation='screen';fx.globalAlpha=a*.95;fx.drawImage(prof,px,py+fl,pw,ph);fx.globalAlpha=a*.25;fx.drawImage(prof,px-6*dpr,py+fl-4*dpr,pw*1.02,ph*1.02);fx.globalAlpha=1;fx.globalCompositeOperation='source-over'}
+   if(parts&&t>20500){fx.globalCompositeOperation='lighter';const tt=t-20500;parts.forEach(p=>{if(tt<p.d){if(diss>0){fx.globalAlpha=Math.min(1,diss)*.9;fx.fillStyle=p.c;fx.fillRect(p.x,p.y+fl,p.s,p.s)}return}p.x+=p.vx*dt/16+Math.sin((tt+p.d)/400)*.3;p.y+=p.vy*dt/16;const al=Math.max(0,1-(tt-p.d)/4200);if(al<=0)return;fx.globalAlpha=al;fx.fillStyle=p.c;fx.fillRect(p.x,p.y,p.s,p.s)});fx.globalAlpha=1;fx.globalCompositeOperation='source-over'}}
+  const fl2=cl((t-31500)/1500,0,1);if(fl2>0){fx.fillStyle='rgba(255,246,228,'+fl2+')';fx.fillRect(0,0,W,Hh)}
+  if(t>33500){finishFilm();return}requestAnimationFrame(fr)};
+ requestAnimationFrame(fr);
+ function finishFilm(){if(done)return;done=true;try{speechSynthesis.cancel()}catch(e){}cap.classList.remove('on');W0.hidden=true;showCert()}
+ $('#skip').onclick=finishFilm}
+function fmtTime(ms){const m=Math.round(ms/60000);return m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min'}
+function showCert(){const st=S.stats||{},solved=Object.keys(S.done).length,w=st.wrong||0;
+ const rank=w<=5?'Mistrz Liczb':w<=15?'Uczeń Profesora':w<=30?'Nieustraszony Badacz':'Wytrwały Poszukiwacz';
+ const b=$('#certBox');b.innerHTML='';b.append(H_('div','k','PAWILON C · 1979'),el('h2',null,'DYPLOM'),H_('p',null,'Niniejszym zaświadcza się, że'));
+ const img=el('img');img.src='profesor.jpg';img.alt='Profesor Wolański';b.append(img,el('div','nm',S.name||'Nieznajomy'),H_('p',null,'przeszedł/przeszła wszystkie pięć rozdziałów Pawilonu C, rozwiązał(a) ostatnie zadanie profesora Aleksandra Wolańskiego i pozwolił(a) mu odejść w spokoju.'));
+ b.append(el('div','rank','★ '+rank.toUpperCase()+' ★'));
+ b.append(H_('div','st','<div>Czas gry<b>'+fmtTime(st.play||0)+'</b></div><div>Rozwiązane zagadki<b>'+solved+'</b></div><div>Błędne odpowiedzi<b>'+w+'</b></div><div>Przetrwane wystraszenia<b>'+(st.scares||0)+'</b></div>'));
+ b.append(el('div','sig','— prof. A. Wolański'));
+ const r=el('div','row');r.style.justifyContent='center';const again=btn('Zagraj jeszcze raz','red');const close=btn('Zamknij','sec');r.append(again,close);b.append(r);$('#cert').hidden=false;AU.good();
+ again.onclick=()=>{const sc=S.scare,so=S.sound,nm=S.name;S=newState();S.scare=sc;S.sound=so;S.name=nm;save();$('#cert').hidden=true;drawInv();loadChapter(1).then(()=>setView('izba'));$('#cover').hidden=false;$('#contTxt').textContent='Nowa gra – zagadki będą miały inne liczby.'};
+ close.onclick=()=>{$('#cert').hidden=true;$('#cover').hidden=false;$('#contTxt').textContent='Gra ukończona! Możesz zacząć od nowa w Notatniku.'}}
+
 /* ================= ROZDZIAŁY, NOTATNIK, START ================= */
 function nextChapter(){AU.bang();const n=S.ch+1;if(!CHAPTERS[n])return ending();S.ch=n;S.inv=[];S.sel=null;S.v[n]=GENS[n]();save();drawInv();
  loadChapter(n).then(()=>{setView(CHAPTERS[n].views[0]);AU.ambient(CHAPTERS[n].root);story('Rozdział '+['','I','II','III','IV','V'][n],CHAPTERS[n].name,CHAPTERS[n].intro,()=>{})})}
-function ending(){S.finished=1;save();AU.good();story('Epilog','Świt',['Zamek puszcza. Za drzwiami nie ma kolejnego pokoju. Jest wyjście na zewnątrz – i pierwsze światło poranka.','W progu stoi wysoki mężczyzna w szpitalnej piżamie. Uśmiecha się. Pierwszy raz od czterdziestu siedmiu lat.','„Nikt mi nie wierzył, że liczby prowadzą do drzwi. Ty mi uwierzyłeś. Ty je otworzyłeś.”','Profesor Aleksander Wolański przechodzi przez próg i rozpływa się w świetle.','Za tobą, w pustym Pawilonie C, po raz pierwszy od lat panuje cisza.','KONIEC'],()=>{$('#cover').hidden=false;$('#contTxt').textContent='Gra ukończona! Możesz zacząć od nowa w Notatniku.'})}
+function ending(){S.finished=1;save();AU.heart(false);playFilm()}
 $('#bN').onclick=()=>{AU.init();const p=openPaper();p.append(el('h2',null,'Notatnik'),el('p','sub','Twoje zapiski. Liczby trzeba jeszcze zrozumieć.'));const jr=el('div','jr');(S.notes.length?S.notes:['Nic jeszcze nie znalazłeś. Świeć latarką po kątach.']).forEach(n=>jr.append(el('div','e','• '+n)));p.append(jr);
  const r=el('div','row');const c=btn('Zamknij');c.onclick=closePaper;const rs=btn('Zacznij od nowa','sec');let arm=false;rs.onclick=()=>{if(!arm){arm=true;rs.textContent='Na pewno? Stuknij jeszcze raz';return}const sc=S.scare,so=S.sound;S=newState();S.scare=sc;S.sound=so;save();closePaper();drawInv();loadChapter(1).then(()=>setView('izba'));$('#cover').hidden=false;$('#contTxt').textContent=''};r.append(c,rs);p.append(r)};
 $('#bS').onclick=()=>{AU.init();AU.on(!S.sound);$('#bS').textContent=S.sound?'♪':'♪̸'};
@@ -659,8 +728,12 @@ const seg=$('#segScare');const segDraw=()=>[...seg.children].forEach(b=>b.classL
 document.documentElement.style.setProperty('--noise','url('+NOISE.toDataURL()+')');
 $('#bS').textContent=S.sound?'♪':'♪̸';
 if(S.finished)$('#contTxt').textContent='Gra ukończona! Możesz zacząć od nowa w Notatniku.';else if(Object.keys(S.done).length||S.ch>1)$('#contTxt').textContent='Zapisany postęp: rozdział '+['','I','II','III','IV','V'][S.ch]+' – '+CHAPTERS[S.ch].name+'. Wyzerujesz go w Notatniku.';
+function askName(cb){const p=openPaper();p.append(el('h2',null,'Zanim wejdziesz…'),el('p',null,'Ktoś w środku chce wiedzieć, kim jesteś. Jak masz na imię?'));const inp=el('input','ans');inp.type='text';inp.id='nameIn';inp.maxLength=20;inp.autocomplete='off';inp.placeholder='imię';inp.style.width='100%';
+ const fb=el('div','fb');const r=el('div','row');const ok=btn('Wchodzę','red');r.append(ok);p.append(inp,r,fb);
+ const go=()=>{const n=inp.value.trim().replace(/[<>]/g,'');if(n.length<2){fb.className='fb no';fb.textContent='Wpisz swoje imię.';return}S.name=n.charAt(0).toUpperCase()+n.slice(1);save();closePaper();cb()};ok.onclick=go;inp.addEventListener('keydown',e=>{if(e.key==='Enter')go()});setTimeout(()=>{try{inp.focus()}catch(e){}},100)}
 $('#bGo').onclick=()=>{AU.init();if(AU.ctx){AU.ctx.resume().catch(()=>{});AU.ambient(CHAPTERS[S.ch].root)}$('#cover').hidden=true;if(S.finished){const sc=S.scare,so=S.sound;S=newState();S.scare=sc;S.sound=so;save();drawInv();loadChapter(1).then(()=>setView('izba'))}
- if(!S.seen['intro'+S.ch]){S.seen['intro'+S.ch]=1;save();story('Rozdział '+['','I','II','III','IV','V'][S.ch],CHAPTERS[S.ch].name,CHAPTERS[S.ch].intro,()=>{})}};
+ const startIntro=()=>{if(!S.seen['intro'+S.ch]){S.seen['intro'+S.ch]=1;save();story('Rozdział '+['','I','II','III','IV','V'][S.ch],CHAPTERS[S.ch].name,CHAPTERS[S.ch].intro,()=>{setTimeout(whisperName,9000)})}else setTimeout(whisperName,12000)};
+ if(!S.name)askName(startIntro);else startIntro()};
 drawInv();
 loadChapter(S.ch).then(()=>{setView(CHAPTERS[S.ch].views.includes(S.view)?S.view:CHAPTERS[S.ch].views[0]);requestAnimationFrame(frame)}).catch(e=>{$('#err').hidden=false;$('#err').textContent=e.message});
 </script>
