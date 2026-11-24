@@ -283,7 +283,10 @@ function overlays(view,x){x.save();x.scale(K,K);const v=V();
   x.fillStyle=S.flags.fuse?'#b8a070':'#111';x.fillRect(356,410,16,30);x.fillStyle='#d8c25a';x.beginPath();x.moveTo(355,385);x.lineTo(362,370);x.lineTo(369,385);x.fill();
   if(S.flags.fuse){x.strokeStyle='rgba(235,235,230,.85)';x.lineWidth=4;x.lineCap='round';x.beginPath();x.moveTo(690,390);x.lineTo(690,230);x.lineTo(900,390);x.closePath();x.stroke();x.strokeRect(690,372,18,18);
    x.fillStyle='rgba(235,235,230,.9)';x.font='bold 30px Caveat, cursive';x.fillText(String(v.tri[0]),652,320);x.fillText(String(v.tri[1]),780,420);x.fillText(S.done.sciana?String(v.tri[2]):'?',810,295);x.font='bold 24px Caveat, cursive';x.fillText('wieszak = ?',720,180)}}
- else if(view==='sala'){if(S.sel==='uv'||S.done.c2_uv){const d=Math.hypot((1090*K)-LX,(425*K)-LY);const a=S.done.c2_uv?.35:cl(1-d/260,0,1)*.95;x.globalAlpha=a;x.fillStyle='#b98cff';x.font='bold 34px Caveat, cursive';x.save();x.translate(900,410);x.rotate(-.03);
+ else if(view==='sala'){if(S.done.c2_uv){const t=Date.now()-(S.flags.uvT||0),ta=Math.max(0,1-t/2200)*.95,na=cl((t-1600)/1400,0,1);
+   if(ta>0){x.globalAlpha=ta;x.fillStyle='#b98cff';x.font='bold 34px Caveat, cursive';x.save();x.translate(900,410);x.rotate(-.03);x.fillText('ROMB: przekątne '+v.rb[0]+' i '+v.rb[1],0,0);x.fillText('jego bok = moje łóżko',40,44);x.restore()}
+   x.globalAlpha=1}
+  else if(S.sel==='uv'){const d=Math.hypot((1090*K)-LX,(425*K)-LY);const a=cl(1-d/260,0,1)*.95;x.globalAlpha=a;x.fillStyle='#b98cff';x.font='bold 34px Caveat, cursive';x.save();x.translate(900,410);x.rotate(-.03);
    x.fillText('ROMB: przekątne '+v.rb[0]+' i '+v.rb[1],0,0);x.fillText('jego bok = moje łóżko',40,44);x.restore();x.globalAlpha=1}}
  else if(view==='izolatka'){x.fillStyle='#120d0a';x.fillRect(1410,395,140,290);x.strokeStyle='#2a221a';x.lineWidth=5;x.strokeRect(1410,395,140,290);x.fillStyle='#3a3026';x.fillRect(1425,415,110,110);x.fillRect(1425,545,110,120);
   x.fillStyle='#8a7a5a';x.beginPath();x.arc(1430,560,6,0,7);x.fill();x.fillStyle='#4a4b48';x.fillRect(1440,575,40,52);x.fillStyle='#111';for(let i=0;i<4;i++)x.fillRect(1444+i*9,588,6,20);
@@ -351,6 +354,7 @@ function frame(){const now=performance.now();if(now-lastF<33||document.hidden){r
   g.globalCompositeOperation='source-over';g.drawImage(BASE,0,0);g.globalCompositeOperation='multiply';g.drawImage(LM,0,0);g.globalCompositeOperation='screen';
   dust.forEach(d=>{d.y-=d.v;d.x+=Math.sin(now/1500+d.r*9)*.2;if(d.y<0){d.y=CH_;d.x=Math.random()*CW}const dd=Math.hypot(d.x-LX,d.y-LY);if(dd<R1){g.fillStyle='rgba(240,235,220,'+(.5*(1-dd/R1))+')';g.beginPath();g.arc(d.x,d.y,d.r,0,7);g.fill()}});
   drawEyes(now);drawHanger(now);
+  if(S.view==='sala'&&S.done.c2_uv){const t=Date.now()-(S.flags.uvT||0),na=cl((t-1600)/1400,0,1)*(.75+.25*Math.sin(now/500));if(na>0){g.save();g.globalAlpha=na;g.shadowColor='#a070ff';g.shadowBlur=26;g.fillStyle='#cdb4ff';g.font='bold '+Math.round(96*K)+'px Caveat, cursive';g.textAlign='center';g.fillText(String(V().rb[2]),1080*K,470*K);g.restore()}}
   vw.spots.forEach((sp,i)=>{if(S.done[sp.id]&&!sp.f)return;if(sp.need&&!sp.need())return;const minor=!!sp.f;
     const cx=(sp.x+sp.w/2)*K,cy=(sp.y+sp.h/2)*K,dd=Math.hypot(cx-LX,cy-LY),near=Math.max(0,1-dd/220),pulse=.5+.5*Math.sin(now/650+i*1.7);
     const fr=cl(Math.max(sp.w,sp.h)*K*.5,32,90)*(minor?.7:1),fa=(minor?.025:.045)+.025*pulse+.07*near;
@@ -510,7 +514,7 @@ const HANDLERS={
      ok:i=>{S.done.c2_zegar=1;save();give('srubokret');addNote('Zegar ustawiony na '+i+'. Za nim schowek ze śrubokrętem.');AU.bell(880);toast('Klik. Zegar odskakuje od ściany. Za nim schowek – śrubokręt.')}})},
  c2_uv(){const v=V();if(S.done.c2_uv)return toast('Fioletowy napis: romb, przekątne '+v.rb[0]+' i '+v.rb[1]+'. Bok = łóżko.');if(S.sel!=='uv')return toast('Odrapana ściana.');
    numPuzzle({title:'Napis w ultrafiolecie',intro:'W świetle lampy UV na ścianie pojawia się fioletowy napis: „ROMB: przekątne '+v.rb[0]+' i '+v.rb[1]+'. Jego bok = moje łóżko.”',q:()=>({q:'Ile wynosi bok rombu?',a:v.rb[2]}),ask:'Bok rombu:',hint:'Przekątne rombu przecinają się pod kątem prostym i dzielą na połowy. Powstaje trójkąt prostokątny o przyprostokątnych e/2 i f/2.',
-     ok:()=>{S.done.c2_uv=1;save();addNote('Napis UV: bok rombu = '+v.rb[2]+' = numer łóżka profesora.');toast('Napis gaśnie. Zostaje liczba '+v.rb[2]+'.')}})},
+     ok:()=>{S.done.c2_uv=1;S.flags.uvT=Date.now();save();addNote('Napis UV: bok rombu = '+v.rb[2]+' = numer łóżka profesora.');TX=1080*K;TY=440*K;toast('Napis gaśnie… a na ścianie rozjarza się liczba '+v.rb[2]+'.');AU.whisper()}})},
  c2_lozka(){const v=V();if(S.done.c2_lozka)return toast('Pod materacem łóżka nr '+v.rb[2]+' nic już nie ma.');
    gridPick({title:'Łóżka',text:'Na ramach łóżek przykręcone są blaszki z numerami 1–16. Pod którym materacem szukać?',n:16,cols:4,correct:v.rb[2],bad:'Pod materacem coś się poruszyło. Szybko cofasz rękę.',
      ok:i=>{S.done.c2_lozka=1;save();give('notatka');addNote('Notatka (II): '+NOTE2.replace(/<br>/g,' '));showNote('Pod materacem łóżka nr '+i,NOTE2)}})},
