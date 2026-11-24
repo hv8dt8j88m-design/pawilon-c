@@ -124,7 +124,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
     <p>Gra zawiera nagłe, głośne wystraszenia. Załóż słuchawki. Zgaś światło.</p>
     <div class="seg" id="segScare"><button type="button" data-v="2">Straszenie: mocne</button><button type="button" data-v="1">łagodne</button><button type="button" data-v="0">wyłączone</button></div><br>
     <button class="go" id="bGo" type="button">WEJDŹ</button><br>
-    <p id="contTxt" style="font-size:14px;margin-top:12px"></p><p style="font-size:11px;opacity:.45;margin-top:6px">wersja 8 · dźwięk po uśpieniu</p>
+    <p id="contTxt" style="font-size:14px;margin-top:12px"></p><p style="font-size:11px;opacity:.45;margin-top:6px">wersja 9 · szybsze straszaki</p>
   </div>
 </div>
 <div id="load">WCZYTYWANIE…</div>
@@ -306,15 +306,15 @@ function speak(text){try{if(!('speechSynthesis' in window))return false;const u=
 
 /* ================= JUMP SCARE (zdjęcia, bez opóźnienia) ================= */
 const scv=$('#scare'),sx=scv.getContext('2d');
-const SCIMG=['scare1','scare2','scare3','scare4'].map(n=>{const i=new Image();let tries=0;i.onerror=()=>{if(tries++<3)setTimeout(()=>{i.src=n+'.jpg?r='+tries},700*tries)};i.src=n+'.jpg';return i});
+const SCIMG=['scare1','scare2','scare3','scare4'].map(n=>{const i=new Image();let tries=0;i.onerror=()=>{if(tries++<3)setTimeout(()=>{i.src=n+'.jpg?r='+tries},700*tries)};i.onload=()=>{try{i.decode&&i.decode().catch(()=>{})}catch(e){}};i.src=n+'.jpg';return i});
 const okImg=i=>i.complete&&i.naturalWidth>0;
 let lastScare=0,lastWasScare=false,scareRun=false,lastScareImg=-1;
-function maybeScare(){if(S.scare===0||scareRun)return;const now=Date.now();if(lastWasScare||now-lastScare<15000){lastWasScare=false;return}
-  const p=S.scare===2?.55:.3;if(Math.random()<p){lastWasScare=true;lastScare=now;jump(pick(S.scare===2?['face','face','face','dark','figure']:['dark','figure','face']))}else lastWasScare=false}
+function maybeScare(){if(S.scare===0||scareRun)return;if(/straszak/.test(location.search)){jump(pick(S.scare===2?['face','face','face','figure']:['dark','figure','face']));return}const now=Date.now();if(lastWasScare||now-lastScare<15000){lastWasScare=false;return}
+  const p=S.scare===2?.55:.3;if(Math.random()<p){lastWasScare=true;lastScare=now;jump(pick(S.scare===2?['face','face','face','figure']:['dark','figure','face']))}else lastWasScare=false}
 function jump(type){if(scareRun||S.scare===0)return;scareRun=true;S.stats.scares++;AU.init();if(AU.ctx&&AU.ctx.state!=='running')AU.ctx.resume().catch(()=>{});
- const dpr=Math.min(2,window.devicePixelRatio||1),W=scv.width=Math.round(innerWidth*dpr),H=scv.height=Math.round(innerHeight*dpr);
+ const dpr=1,W=innerWidth,H=innerHeight;if(scv.width!==W||scv.height!==H){scv.width=W;scv.height=H}
  const good=SCIMG.map((im,k)=>k).filter(k=>okImg(SCIMG[k])&&k!==lastScareImg);let idx=good.length?pick(good):lastScareImg;if(type==='figure'&&okImg(SCIMG[3]))idx=3;if(idx<0)idx=0;lastScareImg=idx;const img=SCIMG[idx];
- const pw=S.scare===2?1:.6,t0=performance.now(),delay=type==='dark'?650:0,dur=delay+(S.scare===2?800:560);let fired=false;
+ const pw=S.scare===2?1:.6,t0=performance.now(),delay=type==='dark'&&S.scare!==2?650:0,dur=delay+(S.scare===2?800:560);let fired=false;
  if(type==='dark')AU.whisper();
  const fire=()=>{fired=true;AU.scream(pw);try{if(navigator.vibrate)navigator.vibrate([80,40,160])}catch(e){}document.body.classList.remove('shake');void document.body.offsetWidth;document.body.classList.add('shake');setTimeout(()=>document.body.classList.remove('shake'),450)};
  if(!delay)fire();
@@ -324,7 +324,7 @@ function jump(type){if(scareRun||S.scare===0)return;scareRun=true;S.stats.scares
   if(!dark&&okImg(img)){const base=Math.max(W,H)*(type==='figure'?.8:1.02),s=base*(1.04+t*.3),j=(Math.random()-.5)*30*dpr*(1-t),a=t>.82?(1-t)/.18:1;
    sx.globalAlpha=a;sx.drawImage(img,W/2-s/2+j,H/2-s/2+j*.6,s,s);sx.globalCompositeOperation='lighter';sx.globalAlpha=a*.2;sx.drawImage(img,W/2-s/2+j+12*dpr,H/2-s/2-4*dpr,s,s);sx.globalCompositeOperation='source-over';
    sx.globalAlpha=.14*a;sx.fillStyle='#000';for(let y=(el/8|0)%4;y<H;y+=4*dpr)sx.fillRect(0,y,W,dpr);
-   if(Math.random()<.35){sx.globalAlpha=.5*a;const by=Math.random()*H;sx.drawImage(scv,0,by,W,30*dpr,(Math.random()-.5)*60*dpr,by,W,30*dpr)}sx.globalAlpha=1}
+   if(Math.random()<.35){sx.globalAlpha=.6*a;const sy=Math.random()*img.height*.9,sh=img.height*.06,dy=H/2-s/2+sy/img.height*s;sx.drawImage(img,0,sy,img.width,sh,W/2-s/2+(Math.random()-.5)*60,dy,s,sh/img.height*s)}sx.globalAlpha=1}
   requestAnimationFrame(fr)};
  fr()}
 addEventListener('pointerdown',()=>{if(AU.ctx&&AU.ctx.state==='suspended'&&!document.hidden&&$('#cover').hidden)AU.ctx.resume().catch(()=>{})},{capture:true});
