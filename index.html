@@ -124,7 +124,7 @@ button{font-family:inherit;touch-action:manipulation;-webkit-tap-highlight-color
     <p>Gra zawiera nagłe, głośne wystraszenia. Załóż słuchawki. Zgaś światło.</p>
     <div class="seg" id="segScare"><button type="button" data-v="2">Straszenie: mocne</button><button type="button" data-v="1">łagodne</button><button type="button" data-v="0">wyłączone</button></div><br>
     <button class="go" id="bGo" type="button">WEJDŹ</button><br>
-    <p id="contTxt" style="font-size:14px;margin-top:12px"></p><p style="font-size:11px;opacity:.45;margin-top:6px">wersja 9</p>
+    <p id="contTxt" style="font-size:14px;margin-top:12px"></p><p style="font-size:14px;font-style:italic;color:#c9b07a;margin-top:18px;line-height:1.5">Gra powstała dla <b>Leny Stolarskiej</b>.<br>Zrobił ją tata – <b>Darek Stolarski</b>.</p><p style="font-size:11px;opacity:.45;margin-top:6px">wersja 9</p>
   </div>
 </div>
 <div id="load">WCZYTYWANIE…</div>
@@ -834,7 +834,7 @@ function showCert(){const st=S.stats||{},solved=Object.keys(S.done).length,w=st.
  b.append(el('div','nm',S.name||'Nieznajomy'),H_('p',null,'przeszedł/przeszła wszystkie pięć rozdziałów Pawilonu C, rozwiązał(a) ostatnie zadanie profesora Aleksandra Wolańskiego i pozwolił(a) mu odejść w spokoju.'));
  b.append(el('div','rank','★ '+rank.toUpperCase()+' ★'));
  b.append(H_('div','st','<div>Czas gry<b>'+fmtTime(st.play||0)+'</b></div><div>Rozwiązane zagadki<b>'+solved+'</b></div><div>Błędne odpowiedzi<b>'+w+'</b></div><div>Przetrwane wystraszenia<b>'+(st.scares||0)+'</b></div>'));
- b.append(el('div','sig','— prof. A. Wolański'));
+ b.append(el('div','sig','— prof. A. Wolański'));const cr=el('p',null,'Gra powstała dla Leny Stolarskiej. Zrobił ją tata – Darek Stolarski.');cr.style.cssText='text-align:center;font-size:13px;font-style:italic;color:#6a5434;margin:10px 0 4px';b.append(cr);
  const r=el('div','row');r.style.justifyContent='center';const again=btn('Zagraj jeszcze raz','red');const close=btn('Zamknij','sec');r.append(again,close);b.append(r);$('#cert').hidden=false;stopEndMusic();AU.good();
  again.onclick=()=>{const sc=S.scare,so=S.sound,nm=S.name;S=newState();S.scare=sc;S.sound=so;S.name=nm;save();$('#cert').hidden=true;drawInv();loadChapter(1).then(()=>setView('izba'));$('#cover').hidden=false;$('#contTxt').textContent='Nowa gra – zagadki będą miały inne liczby.'};
  close.onclick=()=>{$('#cert').hidden=true;$('#cover').hidden=false;$('#contTxt').textContent='Gra ukończona! Możesz zacząć od nowa w Notatniku.'}}
